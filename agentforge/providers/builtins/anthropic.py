@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict, Iterator, List, Optional
 
 from agentforge.providers.base import Provider, ProviderCapabilities
-from agentforge.providers.transports import ChatCompletionsTransport
+from agentforge.providers.transports import AnthropicTransport
 from agentforge.types import NormalizedResponse, Usage
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ class AnthropicProvider(Provider):
     - 工具调用
     - 视觉能力
     - Prompt Caching
+    - Extended Thinking
 
     使用示例：
         provider = AnthropicProvider(
@@ -63,7 +64,7 @@ class AnthropicProvider(Provider):
             supports_streaming=True,
             supports_vision=True,
             supports_caching=True,
-            supports_reasoning=False,
+            supports_reasoning=True,  # Anthropic 支持 extended thinking
         )
 
     def supports(self, capability: str) -> bool:
@@ -77,13 +78,14 @@ class AnthropicProvider(Provider):
         """
         return self.capabilities.supports(capability)
 
-    def _default_transport(self) -> ChatCompletionsTransport:
+    def _default_transport(self) -> AnthropicTransport:
         """默认 Transport。"""
-        return ChatCompletionsTransport()
+        return AnthropicTransport()
 
     def _create_client(self) -> Any:
         """创建 API 客户端。"""
         # 返回 None 表示使用模拟实现
+        # 实际实现需要使用 anthropic 库
         return None
 
     def _do_stream(
@@ -112,23 +114,23 @@ class AnthropicProvider(Provider):
         Yields:
             响应块
         """
-        # 转换消息格式（Anthropic 格式）
-        converted_messages = self._convert_messages(messages)
+        # 使用 Transport 转换消息
+        system, converted_messages = self.transport.convert_messages(messages, **kwargs)
 
         # 转换工具格式
         converted_tools = None
         if tools:
-            converted_tools = self._convert_tools(tools)
+            converted_tools = self.transport.convert_tools(tools)
 
         # 构建请求参数
-        request_kwargs = {
-            "model": self._model,
-            "messages": converted_messages,
-            "max_tokens": kwargs.get("max_tokens", 4096),
-            "stream": True,
-        }
-        if converted_tools:
-            request_kwargs["tools"] = converted_tools
+        request_kwargs = self.transport.build_kwargs(
+            model=self._model,
+            messages=messages,
+            tools=tools,
+            max_tokens=kwargs.get("max_tokens", 16384),
+            stream=True,
+            **kwargs,
+        )
 
         # 调用 API（模拟实现）
         yield self._mock_stream_response()
@@ -154,66 +156,6 @@ class AnthropicProvider(Provider):
             final_response = chunk
 
         return final_response or NormalizedResponse(content="")
-
-    def _convert_messages(self, messages: List[Any]) -> List[Dict[str, Any]]:
-        """转换消息为 Anthropic 格式。
-
-        Args:
-            messages: 消息列表
-
-        Returns:
-            Anthropic 格式消息列表
-        """
-        converted = []
-        for msg in messages:
-            if hasattr(msg, "to_dict"):
-                msg_dict = msg.to_dict()
-            elif isinstance(msg, dict):
-                msg_dict = msg
-            else:
-                continue
-
-            # Anthropic 使用不同的角色名称
-            role = msg_dict.get("role", "user")
-            content = msg_dict.get("content", "")
-
-            # 转换内容格式
-            if isinstance(content, str):
-                content_blocks = [{"type": "text", "text": content}]
-            elif isinstance(content, list):
-                content_blocks = content
-            else:
-                content_blocks = [{"type": "text", "text": str(content)}]
-
-            converted.append({
-                "role": role,
-                "content": content_blocks,
-            })
-
-        return converted
-
-    def _convert_tools(self, tools: List[Any]) -> List[Dict[str, Any]]:
-        """转换工具为 Anthropic 格式。
-
-        Args:
-            tools: 工具列表
-
-        Returns:
-            Anthropic 格式工具列表
-        """
-        converted = []
-        for tool in tools:
-            if hasattr(tool, "to_spec"):
-                spec = tool.to_spec()
-                converted.append({
-                    "name": spec.name,
-                    "description": spec.description,
-                    "input_schema": spec.parameters,
-                })
-            elif isinstance(tool, dict):
-                converted.append(tool)
-
-        return converted
 
     def _mock_stream_response(self) -> NormalizedResponse:
         """模拟流式响应（用于测试）。"""

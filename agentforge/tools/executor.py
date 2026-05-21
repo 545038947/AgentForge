@@ -1,6 +1,6 @@
 """工具执行器。
 
-提供并发执行、中断检查、ContextVars 传播等功能。
+提供并发执行、中断检查、ContextVars 传播、超时控制、工具护栏等功能。
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Callable
 
 from agentforge.tools.base import Tool
+from agentforge.tools.guardrails import ToolCallGuardrailController, ToolGuardrailDecision
 from agentforge.types import ToolResult
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class ToolExecution:
         start_time: 开始时间
         end_time: 结束时间
         error: 错误信息（如果有）
+        timeout: 超时时间（秒）
     """
 
     tool_call_id: str
@@ -40,6 +42,7 @@ class ToolExecution:
     start_time: float = 0.0
     end_time: float = 0.0
     error: Optional[str] = None
+    timeout: float = 0.0
 
     @property
     def duration(self) -> float:
@@ -61,8 +64,9 @@ class ToolExecutor:
     - 并发执行多个工具调用
     - 支持中断检查
     - ContextVars 传播到工作线程
-    - 超时控制
+    - 超时控制（实际生效）
     - 执行记录追踪
+    - 工具护栏（循环检测、失败限制）
 
     使用示例：
         executor = ToolExecutor(max_workers=4)
@@ -82,6 +86,7 @@ class ToolExecutor:
         max_workers: int = 4,
         default_timeout: float = 300.0,
         interrupt_check_interval: float = 0.5,
+        enable_guardrails: bool = True,
     ):
         """初始化执行器。
 
@@ -89,14 +94,20 @@ class ToolExecutor:
             max_workers: 最大并发工作线程数
             default_timeout: 默认超时时间（秒）
             interrupt_check_interval: 中断检查间隔（秒）
+            enable_guardrails: 是否启用工具护栏
         """
         self._max_workers = max_workers
         self._default_timeout = default_timeout
         self._interrupt_check_interval = interrupt_check_interval
+        self._enable_guardrails = enable_guardrails
         self._executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
         self._lock = threading.Lock()
         self._executions: Dict[str, ToolExecution] = {}
         self._interrupt_token: Optional["InterruptToken"] = None
+        self._guardrail_controller: Optional[ToolCallGuardrailController] = None
+
+        if enable_guardrails:
+            self._guardrail_controller = ToolCallGuardrailController()
 
     def start(self) -> None:
         """启动执行器。"""
@@ -125,6 +136,11 @@ class ToolExecutor:
             token: 中断令牌
         """
         self._interrupt_token = token
+
+    def reset_guardrails(self) -> None:
+        """重置护栏控制器。"""
+        if self._guardrail_controller:
+            self._guardrail_controller.reset_for_turn()
 
     def execute(
         self,
@@ -158,9 +174,32 @@ class ToolExecutor:
                     is_error=True,
                 )
 
-            # 执行工具
+            # 护栏检查（执行前）
+            if self._guardrail_controller:
+                decision = self._guardrail_controller.before_call(tool.name, kwargs)
+                if not decision.allows_execution:
+                    logger.warning(f"工具护栏阻止执行: {decision.message}")
+                    return ToolResult(
+                        tool_call_id=tool_call_id,
+                        content=decision.message,
+                        is_error=True,
+                    )
+
+            # 计算超时
             timeout = min(tool.timeout, self._default_timeout)
-            result = tool.execute(tool_call_id, **kwargs)
+            execution.timeout = timeout
+
+            # 执行工具（带超时）
+            result = self._execute_with_timeout(tool, tool_call_id, timeout, **kwargs)
+
+            # 护栏记录（执行后）
+            if self._guardrail_controller:
+                self._guardrail_controller.after_call(
+                    tool.name,
+                    kwargs,
+                    result.content if result else None,
+                    failed=result.is_error if result else True,
+                )
 
             execution.result = result
             return result
@@ -168,6 +207,16 @@ class ToolExecutor:
         except Exception as e:
             execution.error = str(e)
             logger.error(f"工具执行错误 [{tool.name}]: {e}")
+
+            # 护栏记录失败
+            if self._guardrail_controller:
+                self._guardrail_controller.after_call(
+                    tool.name,
+                    kwargs,
+                    str(e),
+                    failed=True,
+                )
+
             return ToolResult(
                 tool_call_id=tool_call_id,
                 content=f"工具执行错误: {e}",
@@ -178,6 +227,60 @@ class ToolExecutor:
             execution.end_time = time.time()
             with self._lock:
                 self._executions[tool_call_id] = execution
+
+    def _execute_with_timeout(
+        self,
+        tool: Tool,
+        tool_call_id: str,
+        timeout: float,
+        **kwargs,
+    ) -> ToolResult:
+        """带超时执行工具。
+
+        Args:
+            tool: 工具实例
+            tool_call_id: 工具调用 ID
+            timeout: 超时时间（秒）
+            **kwargs: 工具参数
+
+        Returns:
+            工具执行结果
+        """
+        # 如果工具支持超时，直接传递
+        if hasattr(tool, "timeout"):
+            try:
+                return tool.execute(tool_call_id, timeout=timeout, **kwargs)
+            except TypeError:
+                # 工具不支持 timeout 参数
+                pass
+
+        # 使用线程执行并等待
+        result_container = {"result": None, "error": None}
+        event = threading.Event()
+
+        def _run():
+            try:
+                result_container["result"] = tool.execute(tool_call_id, **kwargs)
+            except Exception as e:
+                result_container["error"] = e
+            finally:
+                event.set()
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+        # 等待完成或超时
+        if event.wait(timeout=timeout):
+            if result_container["error"]:
+                raise result_container["error"]
+            return result_container["result"]
+        else:
+            # 超时
+            return ToolResult(
+                tool_call_id=tool_call_id,
+                content=f"工具执行超时（{timeout}秒）",
+                is_error=True,
+            )
 
     def execute_batch(
         self,

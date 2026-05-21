@@ -108,7 +108,8 @@ class TestAnthropicProvider:
         provider = AnthropicProvider(api_key="test-key")
 
         messages = [{"role": "user", "content": "Hello"}]
-        converted = provider._convert_messages(messages)
+        # 使用 Transport 进行转换
+        system, converted = provider.transport.convert_messages(messages)
 
         assert len(converted) == 1
         assert converted[0]["role"] == "user"

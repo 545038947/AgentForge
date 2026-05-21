@@ -20,6 +20,15 @@ from agentforge.tools.approval import (
     ApprovalCallback,
     ApprovalManager,
 )
+from agentforge.tools.guardrails import (
+    ToolCallGuardrailController,
+    ToolCallGuardrailConfig,
+    ToolCallSignature,
+    ToolGuardrailDecision,
+    classify_tool_failure,
+    IDEMPOTENT_TOOL_NAMES,
+    MUTATING_TOOL_NAMES,
+)
 
 __all__ = [
     # base
@@ -39,4 +48,12 @@ __all__ = [
     "ApprovalResponse",
     "ApprovalCallback",
     "ApprovalManager",
+    # guardrails
+    "ToolCallGuardrailController",
+    "ToolCallGuardrailConfig",
+    "ToolCallSignature",
+    "ToolGuardrailDecision",
+    "classify_tool_failure",
+    "IDEMPOTENT_TOOL_NAMES",
+    "MUTATING_TOOL_NAMES",
 ]
