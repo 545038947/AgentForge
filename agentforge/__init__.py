@@ -43,8 +43,29 @@ from agentforge.types.errors import (
 # 配置
 from agentforge.config import Settings
 
-# 便捷函数（将在 agent.py 实现后添加）
-# from agentforge.agent import Agent, create_agent, quick_chat
+# Agent
+from agentforge.agent import Agent
+
+# 工具
+from agentforge.tools import (
+    Tool,
+    FunctionTool,
+    tool,
+)
+
+# 事件
+from agentforge.events import (
+    EventType,
+    Event,
+    EventEmitter,
+    EventDispatcher,
+)
+
+# 中断
+from agentforge.interrupt import (
+    InterruptToken,
+    InterruptHandler,
+)
 
 __all__ = [
     # 版本
@@ -81,4 +102,18 @@ __all__ = [
     "InterruptException",
     # 配置
     "Settings",
+    # Agent
+    "Agent",
+    # 工具
+    "Tool",
+    "FunctionTool",
+    "tool",
+    # 事件
+    "EventType",
+    "Event",
+    "EventEmitter",
+    "EventDispatcher",
+    # 中断
+    "InterruptToken",
+    "InterruptHandler",
 ]
