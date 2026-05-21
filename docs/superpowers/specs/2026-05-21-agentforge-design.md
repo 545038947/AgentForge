@@ -2562,24 +2562,230 @@ class SecureApprovalCallback(ApprovalCallback):
 
 ### 17.1 阶段划分
 
-| 阶段 | 内容 | 优先级 |
-|------|------|-------|
-| P0 | `types/`, `providers/transports/` | 核心 |
-| P1 | `providers/base.py`, `providers/registry.py` | Provider |
-| P2 | `tools/base.py`, `tools/executor.py` | 工具 |
-| P3 | `agent.py` | 引擎 |
-| P4 | `delegation/` | 委托 |
-| P5 | `context/` | 上下文 |
-| P6 | `memory/`, `skills/` | 扩展 |
-| P7 | `events/`, `config/`, `interrupt/` | 支撑 |
-| P8 | `utils/` | 工具 |
+| 阶段 | 内容 | 优先级 | 依赖 | 说明 |
+|------|------|-------|------|------|
+| **P0** | `types/`, `config/` | 核心 | 无 | 类型系统是所有组件基础，配置系统是初始化依赖 |
+| **P1** | `providers/transports/`, `providers/base.py`, `providers/registry.py` | Provider | P0 | Transport 可直接复用 hermes-agent 80% |
+| **P2** | `interrupt/`, `events/` | 基础设施 | P0 | 中断和事件是 Agent 运行的底层设施 |
+| **P3** | `tools/base.py`, `tools/executor.py`, `tools/approval.py` | 工具 | P0, P2 | 工具系统依赖中断机制 |
+| **P4** | `agent.py`, `context/` | 引擎 | P0-P3 | Agent 门面整合所有组件 |
+| **P5** | `delegation/` | 委托 | P0-P4 | 委托依赖 Agent 和工具系统 |
+| **P6** | `memory/`, `skills/` | 扩展 | P0-P4 | 存储和技能扩展组件 |
+| **P7** | `providers/builtins/`, `tools/builtins/` | 内置实现 | P1, P3 | 内置 Provider 和工具 |
+| **P8** | `utils/` | 工具函数 | 无 | 独立工具函数，可随时实现 |
 
-### 17.2 测试策略
+### 17.2 阶段详细说明
 
-- 单元测试：每个组件独立测试
-- 集成测试：Agent 完整流程测试
-- Provider 测试：Mock API 响应
-- 跨平台测试：Windows、Linux、macOS CI
+#### P0: 类型系统与配置（预计 2 天）
+
+```
+agentforge/
+├── types/
+│   ├── __init__.py
+│   ├── messages.py      # Message, ContentBlock, TextContent, ImageContent...
+│   ├── responses.py     # NormalizedResponse, ToolCall, Usage
+│   ├── tools.py         # ToolSpec, ToolResult
+│   └── errors.py        # AgentForgeError 及子类
+└── config/
+    ├── __init__.py
+    ├── settings.py      # Settings, ProviderSettings, CompressionSettings...
+    └── secrets.py      # SecretManager
+```
+
+**交付物**：
+- 完整的类型定义，支持类型检查
+- Pydantic 配置验证
+- 单元测试覆盖
+
+#### P1: Provider 与 Transport（预计 3 天）
+
+```
+agentforge/
+├── providers/
+│   ├── __init__.py
+│   ├── base.py          # Provider ABC, ProviderCapabilities
+│   ├── registry.py      # ProviderRegistry
+│   └── transports/
+│       ├── __init__.py
+│       ├── base.py      # Transport ABC
+│       ├── types.py     # 内部类型（如有）
+│       ├── chat_completions.py  # ChatCompletionsTransport
+│       └── adapters/
+│           ├── __init__.py
+│           ├── moonshot.py
+│           ├── qwen.py
+│           └── deepseek.py
+```
+
+**交付物**：
+- Transport 抽象基类
+- ChatCompletionsTransport 完整实现
+- 中国大模型适配器
+- Provider 注册机制
+- 单元测试 + Mock API 测试
+
+#### P2: 中断与事件（预计 2 天）
+
+```
+agentforge/
+├── interrupt/
+│   ├── __init__.py
+│   └── cooperative.py   # InterruptToken, InterruptHandler
+└── events/
+    ├── __init__.py
+    ├── types.py         # EventType, Event
+    └── emitter.py       # EventEmitter, EventDispatcher
+```
+
+**交付物**：
+- 线程安全的中断令牌
+- 父子链式中断传播
+- 事件分发系统
+- 单元测试
+
+#### P3: 工具系统（预计 3 天）
+
+```
+agentforge/
+└── tools/
+    ├── __init__.py
+    ├── base.py          # Tool ABC, FunctionTool
+    ├── executor.py      # ToolExecutor, ToolExecutionContext
+    ├── approval.py      # ApprovalCallback, ApprovalDecision
+    └── toolsets.py      # Toolset 定义
+```
+
+**交付物**：
+- Tool 抽象基类
+- 函数装饰器 `@tool`
+- 并发执行器（ThreadPoolExecutor + ContextVars）
+- 审批系统
+- 单元测试
+
+#### P4: Agent 核心与上下文压缩（预计 4 天）
+
+```
+agentforge/
+├── agent.py             # Agent 门面类
+├── managers/
+│   ├── __init__.py
+│   ├── message.py       # MessageManager
+│   └── tool_orchestrator.py  # ToolOrchestrator
+└── context/
+    ├── __init__.py
+    ├── compressor.py    # ContextCompressor
+    ├── estimator.py     # TokenEstimator
+    └── protection.py    # 保护区域计算
+```
+
+**交付物**：
+- Agent 门面类
+- MessageManager 消息管理
+- ToolOrchestrator 工具编排
+- ContextCompressor 压缩策略
+- 集成测试
+
+#### P5: 委托系统（预计 3 天）
+
+```
+agentforge/
+└── delegation/
+    ├── __init__.py
+    ├── config.py        # DelegationConfig, IsolationConfig
+    ├── manager.py       # DelegationManager
+    ├── result.py        # DelegationResult, DelegationStrategy
+    └── approval.py      # ChildAgentApprovalCallback
+```
+
+**交付物**：
+- 委托配置与隔离边界
+- DelegationManager 完整实现
+- 失败处理与重试
+- 单元测试 + 集成测试
+
+#### P6: 存储与技能（预计 2 天）
+
+```
+agentforge/
+├── memory/
+│   ├── __init__.py
+│   ├── base.py          # MemoryProvider ABC
+│   └── builtins/
+│       ├── __init__.py
+│       ├── in_memory.py
+│       └── file_based.py
+└── skills/
+    ├── __init__.py
+    ├── base.py          # Skill ABC
+    ├── loader.py        # Skill 加载器
+    └── registry.py      # SkillRegistry
+```
+
+**交付物**：
+- MemoryProvider 抽象与内置实现
+- Skill 抽象与注册机制
+- 单元测试
+
+#### P7: 内置实现（预计 3 天）
+
+```
+agentforge/
+├── providers/
+│   └── builtins/
+│       ├── __init__.py
+│       ├── openai.py
+│       ├── anthropic.py
+│       └── chinese/
+│           ├── __init__.py
+│           ├── moonshot.py
+│           ├── qwen.py
+│           └── deepseek.py
+└── tools/
+    └── builtins/
+        ├── __init__.py
+        ├── delegate.py
+        ├── shell.py
+        └── ...
+```
+
+**交付物**：
+- OpenAI/Anthropic Provider
+- 中国大模型 Provider
+- 内置工具（delegate, shell 等）
+- 集成测试
+
+#### P8: 工具函数（预计 1 天）
+
+```
+agentforge/
+└── utils/
+    ├── __init__.py
+    ├── platform.py      # 跨平台兼容
+    └── logging.py       # 日志配置
+```
+
+**交付物**：
+- 平台检测与兼容
+- 日志配置
+- 文档完善
+
+### 17.3 测试策略
+
+- **单元测试**：每个组件独立测试，覆盖率 > 80%
+- **集成测试**：Agent 完整流程测试
+- **Provider 测试**：Mock API 响应，验证协议转换
+- **跨平台测试**：Windows、Linux、macOS CI
+
+### 17.4 里程碑
+
+| 里程碑 | 阶段 | 交付物 |
+|--------|------|--------|
+| M1 | P0-P1 | 可用的 Provider + Transport，支持 API 调用 |
+| M2 | P0-P3 | 完整的工具执行能力 |
+| M3 | P0-P4 | 可运行的 Agent，支持对话循环 |
+| M4 | P0-P5 | 支持子 Agent 委托 |
+| M5 | P0-P6 | 完整框架，支持存储和技能 |
+| M6 | P0-P8 | 发布就绪，包含内置实现和文档 |
 
 ## 18. 附录
 
