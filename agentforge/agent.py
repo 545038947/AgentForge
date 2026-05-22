@@ -388,6 +388,67 @@ class Agent:
 
         self._memory_manager.register(name, provider, config)
 
+    def enable_memory_store(
+        self,
+        base_path: str = "./memories",
+        memory_char_limit: int = 2200,
+        user_char_limit: int = 1375,
+    ) -> None:
+        """启用 MemoryStore（长期记忆）。
+
+        MemoryStore 用于存储持久化的记忆信息，包括：
+        - MEMORY.md: 事实记忆（有界 2200 chars）
+        - USER.md: 用户偏好（有界 1375 chars）
+
+        Args:
+            base_path: 存储目录路径
+            memory_char_limit: MEMORY 文件字符限制
+            user_char_limit: USER 文件字符限制
+
+        使用示例：
+            agent = Agent(model="gpt-4")
+            agent.enable_memory_store("./memories")
+
+            # 预取（加载 MemoryStore 并创建冻结快照）
+            agent.prefetch()
+
+            # 运行对话
+            agent.run("记住我的名字是张三")
+
+            # 同步（写入 MemoryStore）
+            agent.sync()
+        """
+        if self._memory_manager is None:
+            from agentforge.memory import MemoryManager
+            self._memory_manager = MemoryManager(
+                event_dispatcher=self._event_dispatcher,
+            )
+
+        self._memory_manager.enable_memory_store(
+            base_path=base_path,
+            memory_char_limit=memory_char_limit,
+            user_char_limit=user_char_limit,
+        )
+
+    def add_memory_entry(
+        self,
+        target: str,
+        entry: str,
+    ) -> bool:
+        """添加记忆条目到 MemoryStore。
+
+        Args:
+            target: 目标类型（memory/user）
+            entry: 条目内容
+
+        Returns:
+            是否成功添加
+        """
+        if self._memory_manager is None:
+            return False
+
+        return self._memory_manager.add_memory_entry(target, entry)
+
     def get_memory(self, name: str) -> Optional["MemoryProvider"]:
         """获取记忆提供者。
 
@@ -408,6 +469,7 @@ class Agent:
         """预取记忆数据。
 
         在运行对话前预加载记忆数据到缓存。
+        会调用 MemoryManager.on_session_start() 触发冻结快照。
 
         Args:
             keys: 每个 provider 要预取的键列表
@@ -418,9 +480,12 @@ class Agent:
         if self._memory_manager is None:
             return {}
 
+        # 触发会话开始钩子（加载 MemoryStore 并创建冻结快照）
+        self._memory_manager.on_session_start()
+
         result = self._memory_manager.prefetch_all(keys)
 
-        # 将记忆信息添加到系统提示
+        # 将记忆信息添加到系统提示（包含冻结快照）
         memory_prompt = self._memory_manager.build_system_prompt()
         if memory_prompt:
             self._message_manager.add_memory_context(memory_prompt)
@@ -435,6 +500,9 @@ class Agent:
         if self._memory_manager is None:
             return {}
 
+        # 触发会话开始钩子
+        self._memory_manager.on_session_start()
+
         result = await self._memory_manager.prefetch_all_async(keys)
 
         memory_prompt = self._memory_manager.build_system_prompt()
@@ -447,6 +515,7 @@ class Agent:
         """同步记忆数据。
 
         将缓存中的数据写回 provider。
+        会调用 MemoryManager.on_session_end() 同步 MemoryStore。
 
         Returns:
             每个 provider 同步的条目数
@@ -454,7 +523,12 @@ class Agent:
         if self._memory_manager is None:
             return {}
 
-        return self._memory_manager.sync_all()
+        result = self._memory_manager.sync_all()
+
+        # 触发会话结束钩子（同步 MemoryStore 并刷新快照）
+        self._memory_manager.on_session_end()
+
+        return result
 
     async def sync_async(self) -> Dict[str, int]:
         """异步同步记忆数据。"""

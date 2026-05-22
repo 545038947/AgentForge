@@ -1,6 +1,6 @@
 """Memory Manager 编排器。
 
-管理多个 memory provider，提供统一的预取、同步和查询接口。
+管理多个 memory provider 和 MemoryStore，提供统一的预取、同步和查询接口。
 参考 hermes-agent/agent/memory_manager.py。
 """
 
@@ -10,9 +10,11 @@ import asyncio
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from agentforge.memory.base import MemoryProvider
+from agentforge.memory.memory_store import MemoryStore
 from agentforge.events import EventType, EventDispatcher
 
 if TYPE_CHECKING:
@@ -63,42 +65,59 @@ class MemoryBlock:
 class MemoryManager:
     """记忆管理器。
 
-    负责管理多个 memory provider，提供：
+    负责管理多个 memory provider 和 MemoryStore，提供：
     - 统一的预取接口（prefetch_all）
     - 统一的同步接口（sync_all）
     - 工具 schema 收集
     - 系统提示构建
+    - 冻结快照模式
+    - 生命周期钩子
+
+    记忆层次：
+    - Layer 1: Session Memory（SessionProvider，独立管理）
+    - Layer 2: Working Memory（ContextCompressor，独立管理）
+    - Layer 3: Persistent Memory（MemoryStore）
+    - Layer 4: External Provider（可选）
 
     使用示例：
         manager = MemoryManager()
         manager.register("session", InMemoryProvider())
-        manager.register("file", FileBasedProvider())
+
+        # 启用 MemoryStore
+        manager.enable_memory_store("./memories")
 
         # 预取所有数据
-        await manager.prefetch_all()
+        manager.prefetch_all()
 
-        # 获取系统提示
+        # 获取系统提示（包含冻结快照）
         prompt = manager.build_system_prompt()
 
         # 同步所有数据
-        await manager.sync_all()
+        manager.sync_all()
     """
 
     def __init__(
         self,
         event_dispatcher: Optional[EventDispatcher] = None,
         max_workers: int = 4,
+        memory_store_path: Optional[str] = None,
     ):
         """初始化记忆管理器。
 
         Args:
             event_dispatcher: 事件分发器
             max_workers: 并发工作线程数
+            memory_store_path: MemoryStore 存储路径（可选）
         """
         self._providers: Dict[str, MemoryProvider] = {}
         self._provider_configs: Dict[str, Dict[str, Any]] = {}
         self._event_dispatcher = event_dispatcher
         self._max_workers = max_workers
+
+        # MemoryStore（长期记忆）
+        self._memory_store: Optional[MemoryStore] = None
+        if memory_store_path:
+            self.enable_memory_store(memory_store_path)
 
         # 缓存
         self._cache: Dict[str, MemoryBlock] = {}
@@ -107,6 +126,9 @@ class MemoryManager:
         # 预取状态
         self._prefetched = False
         self._prefetch_lock = threading.Lock()
+
+        # 会话状态（用于生命周期钩子）
+        self._session_started = False
 
     def register(
         self,
@@ -151,6 +173,129 @@ class MemoryManager:
             logger.debug(f"已取消注册 memory provider: {name}")
             return True
         return False
+
+    # === MemoryStore 管理 ===
+
+    def enable_memory_store(
+        self,
+        base_path: str,
+        memory_char_limit: int = 2200,
+        user_char_limit: int = 1375,
+    ) -> None:
+        """启用 MemoryStore（长期记忆）。
+
+        Args:
+            base_path: 存储目录路径
+            memory_char_limit: MEMORY 文件字符限制
+            user_char_limit: USER 文件字符限制
+        """
+        self._memory_store = MemoryStore(
+            base_path=base_path,
+            memory_char_limit=memory_char_limit,
+            user_char_limit=user_char_limit,
+        )
+        logger.debug(f"已启用 MemoryStore: {base_path}")
+
+    def disable_memory_store(self) -> None:
+        """禁用 MemoryStore。"""
+        if self._memory_store:
+            # 同步到磁盘
+            self._memory_store.sync_to_disk()
+            self._memory_store = None
+            logger.debug("已禁用 MemoryStore")
+
+    def get_memory_store(self) -> Optional[MemoryStore]:
+        """获取 MemoryStore 实例。"""
+        return self._memory_store
+
+    def has_memory_store(self) -> bool:
+        """检查是否启用了 MemoryStore。"""
+        return self._memory_store is not None
+
+    def add_memory_entry(
+        self,
+        target: str,
+        entry: str,
+        sync: bool = True,
+    ) -> bool:
+        """添加记忆条目到 MemoryStore。
+
+        Args:
+            target: 目标类型（memory/user）
+            entry: 条目内容
+            sync: 是否立即同步到磁盘
+
+        Returns:
+            是否成功添加
+        """
+        if not self._memory_store:
+            logger.warning("MemoryStore 未启用")
+            return False
+
+        return self._memory_store.add_entry(target, entry, sync=sync)
+
+    def get_memory_for_prompt(self, target: str) -> str:
+        """获取用于系统提示的记忆块。
+
+        返回冻结快照，保持 LLM 前缀缓存。
+
+        Args:
+            target: 目标类型（memory/user）
+
+        Returns:
+            记忆块文本
+        """
+        if not self._memory_store:
+            return ""
+        return self._memory_store.format_for_system_prompt(target)
+
+    # === 生命周期钩子 ===
+
+    def on_session_start(self) -> None:
+        """会话开始钩子。
+
+        加载记忆并创建冻结快照。
+        """
+        if self._memory_store:
+            self._memory_store.load_from_disk()
+            # 捕获冻结快照
+            self._memory_store.refresh_snapshot()
+
+        self._session_started = True
+        logger.debug("会话开始，已加载记忆")
+
+    def on_session_end(self) -> None:
+        """会话结束钩子。
+
+        同步记忆到存储。
+        """
+        if self._memory_store:
+            self._memory_store.sync_to_disk()
+            self._memory_store.refresh_snapshot()
+
+        self._session_started = False
+        logger.debug("会话结束，已同步记忆")
+
+    def on_turn_start(self, turn_number: int, message: str) -> None:
+        """回合开始钩子。
+
+        Args:
+            turn_number: 回合编号
+            message: 用户消息
+        """
+        # 预取相关记忆（如果需要）
+        pass
+
+    def on_memory_write(self, action: str, target: str, content: str) -> None:
+        """记忆写入钩子。
+
+        Args:
+            action: 操作类型（add/remove/update）
+            target: 目标类型
+            content: 内容
+        """
+        if self._memory_store and action == "add":
+            self._memory_store.add_entry(target, content)
 
     def get_provider(self, name: str) -> Optional[MemoryProvider]:
         """获取指定 provider。
@@ -393,15 +538,29 @@ class MemoryManager:
         """构建系统提示。
 
         从各 provider 收集信息并构建系统提示。
+        包含 MemoryStore 的冻结快照（保持 LLM 前缀缓存）。
 
         Args:
             include_blocks: 要包含的 provider 块列表，None 表示全部
+                特殊值 "memory" 和 "user" 表示 MemoryStore 的块
 
         Returns:
             系统提示文本
         """
         parts: List[str] = []
 
+        # 添加 MemoryStore 冻结快照（优先级最高）
+        if self._memory_store and (include_blocks is None or "memory" in include_blocks):
+            memory_block = self._memory_store.format_for_system_prompt("memory")
+            if memory_block:
+                parts.append(memory_block)
+
+        if self._memory_store and (include_blocks is None or "user" in include_blocks):
+            user_block = self._memory_store.format_for_system_prompt("user")
+            if user_block:
+                parts.append(user_block)
+
+        # 添加其他 provider 的提示
         for name, provider in self._providers.items():
             if include_blocks and name not in include_blocks:
                 continue
