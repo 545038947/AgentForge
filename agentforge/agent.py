@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from agentforge.providers import Provider
     from agentforge.memory import MemoryManager, MemoryProvider
     from agentforge.skills import Skill, SkillRegistry
+    from agentforge.profiles import ProfileRegistry, ProviderRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -105,12 +106,14 @@ class Agent:
         skill_registry: Optional["SkillRegistry"] = None,
         session_provider: Optional["SessionProvider"] = None,
         session_id: Optional[str] = None,
+        profile_registry: Optional["ProfileRegistry"] = None,
+        provider_registry: Optional["ProviderRegistry"] = None,
     ):
         """初始化 Agent。
 
         支持两种初始化方式：
 
-        1. 简化方式（自动选择 Provider）：
+        1. 化方式（自动选择 Provider）：
            Agent(model="gpt-4", api_key="...")
 
         2. 完整方式（显式 Provider）：
@@ -128,6 +131,8 @@ class Agent:
             skill_registry: 技能注册表（可选）
             session_provider: 会话提供者（可选，用于持久化）
             session_id: 会话 ID（可选，用于恢复会话）
+            profile_registry: Profile 注册表（可选，用于专家 Agent）
+            provider_registry: Provider 注册表（可选，用于专家 Agent）
         """
         # 自动选择 Provider
         if provider is None:
@@ -227,6 +232,10 @@ class Agent:
 
         # 委托深度
         self._delegate_depth = 0
+
+        # Profile 相关
+        self._profile_registry = profile_registry
+        self._provider_registry = provider_registry
 
         # Agent 状态追踪（用于诊断和监控）
         self._last_activity_ts: float = time.time()
@@ -338,6 +347,16 @@ class Agent:
         if not self._session_provider or not self._session_id:
             return False
         return self._session_provider.set_session_title(self._session_id, title)
+
+    def validate_profiles(self) -> Dict[str, tuple]:
+        """验证所有 Profile 的健康状态。
+
+        Returns:
+            {profile_name: (errors, warnings)}
+        """
+        if self._profile_registry is None:
+            return {}
+        return self._profile_registry.validate()
 
     def add_tool(self, tool: Union[Tool, Callable]) -> Tool:
         """添加工具。
