@@ -15,7 +15,7 @@
 - **⚡ 异步 API** - 完整的异步支持，适合 Web 服务和高并发场景
 - **🛠️ 工具系统** - 灵活的工具定义和执行，支持并发执行
 - **🪝 钩子系统** - 轻量级事件驱动，在关键生命周期点触发处理器
-- **🧠 记忆系统** - 可插拔的记忆提供者，支持上下文压缩
+- **🧠 记忆系统** - 多层记忆架构，支持长期记忆、上下文压缩、跨会话持久化
 - **🔄 委托系统** - 子 Agent 创建和结果聚合，支持并行委托
 
 ## 安装
@@ -112,25 +112,61 @@ print(response.content)
 
 ### 使用记忆系统
 
+AgentForge 提供多层记忆架构，支持长期记忆存储和跨会话持久化：
+
 ```python
-from agentforge import Agent, InMemoryProvider, MemoryManager
+from agentforge import Agent
 
-# 创建记忆管理器
-memory_manager = MemoryManager()
-memory_manager.add_provider("session", InMemoryProvider())
+agent = Agent(model="gpt-4")
 
-# 创建带记忆的 Agent
-agent = Agent(model="gpt-4", memory_manager=memory_manager)
+# 启用长期记忆存储
+agent.enable_memory_store("./memories")
 
-# 预取记忆
+# 预取记忆（加载冻结快照）
 agent.prefetch()
 
-# 运行对话（会自动保存到记忆）
-response1 = agent.run("我叫张三")
-response2 = agent.run("我叫什么名字？")  # Agent 会记住 "张三"
+# 运行对话
+agent.run("记住我的名字是张三")
 
-# 同步记忆
+# 同步到存储
 agent.sync()
+
+# 新会话 - 记忆会自动恢复
+agent2 = Agent(model="gpt-4")
+agent2.enable_memory_store("./memories")
+agent2.prefetch()
+agent2.run("我叫什么名字？")  # Agent 会回答 "张三"
+```
+
+### 记忆层次结构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        MemorySystem                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  Layer 3: Persistent Memory（MemoryStore）                       │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  - MEMORY.md: 事实记忆（有界 2200 chars）                 │    │
+│  │  - USER.md: 用户偏好（有界 1375 chars）                  │    │
+│  │  - 冻结快照模式（保持 LLM 前缀缓存）                     │    │
+│  │  - 安全扫描（检测注入攻击）                              │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                           │                                       │
+│  Layer 2: Working Memory（ContextCompressor）                    │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  - Token 预算驱动压缩                                    │    │
+│  │  - LLM 辅助摘要生成                                      │    │
+│  │  - 工具结果修剪                                          │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                           │                                       │
+│  Layer 1: Session Memory（SessionProvider）                      │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  - 文件存储（JSONL）                                     │    │
+│  │  - 消息历史持久化                                        │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 支持的 Provider
@@ -200,6 +236,8 @@ agentforge/
 │   └── emitter.py        # 事件发射器
 ├── memory/               # 记忆系统
 │   ├── base.py           # 记忆提供者基类
+│   ├── manager.py        # 记忆管理器（生命周期钩子）
+│   ├── memory_store.py   # 长期记忆存储（冻结快照）
 │   └── builtins/         # 内置记忆提供者
 ├── skills/               # 技能系统
 │   ├── base.py           # 技能基类
@@ -469,6 +507,38 @@ for i in range(100):
 - **保护头部**：系统提示、初始指令等关键消息不会被压缩
 - **保护尾部**：最近的对话保持完整，确保当前上下文准确
 - **压缩中间**：中间消息会被摘要替换，保留关键信息
+
+### LLM 辅助压缩
+
+AgentForge 支持 LLM 辅助生成高质量摘要：
+
+```python
+from agentforge import Agent, Settings
+
+settings = Settings(
+    compression_use_llm=True,  # 启用 LLM 辅助摘要
+)
+
+agent = Agent(model="gpt-4", settings=settings)
+
+# 长对话 - 自动使用 LLM 生成摘要
+for i in range(100):
+    agent.run(f"问题 {i}: ...")
+    # 当超过阈值时，调用 LLM 生成结构化摘要
+```
+
+LLM 摘要采用结构化模板：
+
+```markdown
+## 活动任务
+## 目标
+## 约束与偏好
+## 已完成操作
+## 进行中
+## 关键决策
+## 待处理事项
+## 相关上下文
+```
 
 ### 手动控制
 
