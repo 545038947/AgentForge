@@ -1,0 +1,72 @@
+site_name: AgentForge
+site_description: 可复用的 Agent 框架库，支持中国大模型
+site_author: AgentForge Team
+repo_url: https://github.com/agentforge/agentforge
+repo_name: agentforge/agentforge
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+
+nav:
+  - 首页: index.md
+  - 快速开始: getting-started.md
+  - 用户指南:
+      - user-guide/agent.md
+      - user-guide/tools.md
+      - user-guide/memory.md
+      - user-guide/streaming.md
+      - user-guide/async.md
+  - API 参考:
+      - api-reference/agent.md
+      - api-reference/memory.md
+      - api-reference/tools.md
+      - api-reference/providers.md
+      - api-reference/session.md
+      - api-reference/types.md
+      - api-reference/events.md
+      - api-reference/core.md
+  - 进阶指南:
+      - guides/memory-extension.md
+  - 更新日志: changelog.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_root_full_path: true
+            merge_init_into_class: true
+            docstring_style: google
+            heading_level: 1
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - toc:
+      permalink: true
