@@ -15,6 +15,7 @@ from agentforge.types import (
     ToolUseContent,
     ToolResultContent,
     NormalizedResponse,
+    StreamDelta,
     ToolCall,
     Usage,
     ToolSpec,
@@ -147,6 +148,7 @@ __all__ = [
     "ToolResultContent",
     # 响应类型
     "NormalizedResponse",
+    "StreamDelta",
     "ToolCall",
     "Usage",
     # 工具类型

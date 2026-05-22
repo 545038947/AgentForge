@@ -25,7 +25,7 @@ from agentforge.interrupt import InterruptHandler, InterruptToken
 from agentforge.managers import MessageManager, ToolOrchestrator
 from agentforge.context import ContextCompressor
 from agentforge.tools import Tool, FunctionTool, ApprovalCallback
-from agentforge.types import Message, NormalizedResponse, ToolResult
+from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta
 from agentforge.core import (
     IterationBudget,
     FallbackChain,
@@ -763,6 +763,216 @@ class Agent:
 
             # 无工具调用，返回最终响应
             self._message_manager.add_assistant_message(final_response)
+            self._event_dispatcher.dispatch(EventType.AGENT_END, {})
+            break
+
+    def stream_deltas(
+        self,
+        message: Union[str, Message],
+        max_iterations: int = 10,
+        interrupt_token: Optional[InterruptToken] = None,
+        include_reasoning: bool = False,
+    ) -> Iterator[StreamDelta]:
+        """流式运行 Agent，返回 Token 增量。
+
+        与 stream() 不同，此方法返回每个 Token 增量，
+        适用于需要实时显示响应的场景（如 CLI、Web UI）。
+
+        Args:
+            message: 用户消息
+            max_iterations: 最大迭代次数
+            interrupt_token: 中断令牌（可选）
+            include_reasoning: 是否包含推理增量
+
+        Yields:
+            StreamDelta 增量对象，包含 content、reasoning 等
+
+        使用示例：
+            for delta in agent.stream_deltas("你好"):
+                if delta.has_content:
+                    print(delta.content, end="", flush=True)
+                if delta.is_final:
+                    print()  # 换行
+        """
+        # 添加用户消息
+        if isinstance(message, str):
+            self._message_manager.add_user_message(message)
+        else:
+            self._message_manager.add_message(message)
+
+        # 发射开始事件
+        self._event_dispatcher.dispatch(EventType.AGENT_START, {})
+
+        # 创建中断令牌
+        if interrupt_token is None:
+            interrupt_token = self._interrupt_handler.create_token()
+
+        # 重置迭代预算
+        self._iteration_budget.reset(max_iterations)
+        self._guardrails.reset_for_turn()
+
+        interrupt_check = lambda: interrupt_token.check()
+
+        iteration = 0
+        while iteration < max_iterations and self._iteration_budget.remaining > 0:
+            # 检查中断
+            if interrupt_token.check():
+                self._event_dispatcher.dispatch(
+                    EventType.AGENT_INTERRUPT,
+                    {"reason": interrupt_token.reason},
+                )
+                yield StreamDelta(
+                    content=f"\n[中断: {interrupt_token.reason}]",
+                    finish_reason="interrupt",
+                )
+                break
+
+            # 获取上下文
+            context = self._message_manager.get_context()
+
+            # 流式调用 Provider
+            self._event_dispatcher.dispatch(EventType.PROVIDER_REQUEST, {})
+
+            accumulated_content = ""
+            accumulated_reasoning = ""
+            accumulated_tool_calls: List[Any] = []
+            final_usage = None
+            final_finish_reason = "stop"
+
+            try:
+                for chunk in self._provider.stream(
+                    messages=context,
+                    tools=list(self._tools.values()) if self._tools else None,
+                ):
+                    # 提取增量内容
+                    delta_content = ""
+                    delta_reasoning = ""
+
+                    if chunk.content:
+                        # 计算增量（本次内容 - 已累积内容）
+                        delta_content = chunk.content[len(accumulated_content):]
+                        accumulated_content = chunk.content
+
+                    if include_reasoning and chunk.reasoning:
+                        delta_reasoning = chunk.reasoning[len(accumulated_reasoning):]
+                        accumulated_reasoning = chunk.reasoning
+
+                    # 处理工具调用增量
+                    if chunk.tool_calls:
+                        # 对于流式工具调用，通常是累积式的
+                        accumulated_tool_calls = chunk.tool_calls
+
+                    # 提取使用统计
+                    if chunk.usage:
+                        final_usage = chunk.usage
+
+                    if chunk.finish_reason:
+                        final_finish_reason = chunk.finish_reason
+
+                    # 发射 STREAM_DELTA 事件
+                    if delta_content or delta_reasoning:
+                        self._event_dispatcher.dispatch(
+                            EventType.STREAM_DELTA,
+                            {
+                                "content": delta_content,
+                                "reasoning": delta_reasoning,
+                            },
+                        )
+
+                    # 只在有增量时才 yield
+                    if delta_content or delta_reasoning:
+                        yield StreamDelta(
+                            content=delta_content,
+                            reasoning=delta_reasoning,
+                        )
+
+            except Exception as e:
+                logger.error(f"流式调用失败: {e}")
+                yield StreamDelta(
+                    content=f"\n[错误: {e}]",
+                    finish_reason="error",
+                )
+                break
+
+            self._event_dispatcher.dispatch(EventType.STREAM_END, {})
+
+            # 检查是否有工具调用
+            if accumulated_tool_calls:
+                # 构建完整响应
+                final_response = NormalizedResponse(
+                    content=accumulated_content,
+                    tool_calls=accumulated_tool_calls,
+                    usage=final_usage,
+                    finish_reason="tool_calls",
+                )
+
+                # 添加 assistant 消息
+                self._message_manager.add_assistant_message(final_response)
+
+                # 发射工具调用生成事件
+                self._event_dispatcher.dispatch(
+                    EventType.TOOL_GENERATED,
+                    {"tool_calls": accumulated_tool_calls},
+                )
+
+                # 执行工具
+                self._event_dispatcher.dispatch(
+                    EventType.TOOL_START,
+                    {"tool_calls": accumulated_tool_calls},
+                )
+
+                # 发射工具执行提示
+                yield StreamDelta(
+                    content="\n[执行工具...]",
+                )
+
+                tool_results = self._execution_engine.execute_tool_calls(
+                    response=final_response,
+                    tools=self._tools,
+                    interrupt_check=interrupt_check,
+                )
+
+                self._event_dispatcher.dispatch(
+                    EventType.TOOL_END,
+                    {"results": tool_results},
+                )
+
+                # 显示工具执行结果摘要
+                for result in tool_results:
+                    if result.is_error:
+                        yield StreamDelta(
+                            content=f"\n[工具 {result.tool_name} 错误]",
+                        )
+                    else:
+                        yield StreamDelta(
+                            content=f"\n[工具 {result.tool_name} 完成]",
+                        )
+
+                # 添加工具结果
+                self._message_manager.add_tool_results(tool_results)
+
+                self._iteration_budget.consume()
+                iteration += 1
+                continue
+
+            # 无工具调用，返回最终增量
+            final_response = NormalizedResponse(
+                content=accumulated_content,
+                reasoning=accumulated_reasoning,
+                tool_calls=None,
+                usage=final_usage,
+                finish_reason=final_finish_reason,
+            )
+
+            self._message_manager.add_assistant_message(final_response)
+
+            # 发射最终增量
+            yield StreamDelta(
+                content="",  # 内容已在前面的增量中发送
+                finish_reason=final_finish_reason,
+                usage=final_usage,
+            )
+
             self._event_dispatcher.dispatch(EventType.AGENT_END, {})
             break
 

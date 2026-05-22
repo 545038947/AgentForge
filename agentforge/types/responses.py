@@ -81,6 +81,59 @@ class Usage:
 
 
 @dataclass
+class StreamDelta:
+    """流式响应增量。
+
+    表示流式响应中的单个增量块，包含文本增量、工具调用增量等。
+
+    属性：
+        content: 文本增量（可能为空字符串）
+        reasoning: 推理增量（支持推理模型）
+        tool_calls: 工具调用增量（流式工具调用）
+        finish_reason: 结束原因（仅最后一个块有值）
+        usage: Token 使用统计（仅最后一个块有值）
+    """
+
+    content: str = ""
+    reasoning: str = ""
+    tool_calls: Optional[List[ToolCall]] = None
+    finish_reason: Optional[str] = None
+    usage: Optional[Usage] = None
+
+    @property
+    def has_content(self) -> bool:
+        """检查是否有文本内容。"""
+        return bool(self.content)
+
+    @property
+    def has_reasoning(self) -> bool:
+        """检查是否有推理内容。"""
+        return bool(self.reasoning)
+
+    @property
+    def has_tool_calls(self) -> bool:
+        """检查是否有工具调用。"""
+        return bool(self.tool_calls)
+
+    @property
+    def is_final(self) -> bool:
+        """检查是否为最终块。"""
+        return self.finish_reason is not None
+
+    def __repr__(self) -> str:
+        parts = []
+        if self.content:
+            parts.append(f"content={self.content!r}")
+        if self.reasoning:
+            parts.append(f"reasoning={self.reasoning!r}")
+        if self.tool_calls:
+            parts.append(f"tool_calls={len(self.tool_calls)}")
+        if self.finish_reason:
+            parts.append(f"finish_reason={self.finish_reason!r}")
+        return f"StreamDelta({', '.join(parts)})"
+
+
+@dataclass
 class NormalizedResponse:
     """标准化 API 响应。
 
