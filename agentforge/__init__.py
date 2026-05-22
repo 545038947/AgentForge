@@ -47,7 +47,7 @@ from agentforge.types.errors import (
 from agentforge.config import Settings
 
 # Agent
-from agentforge.agent import Agent
+from agentforge.agent import Agent, quick_chat
 
 # 工具
 from agentforge.tools import (
@@ -62,6 +62,7 @@ from agentforge.events import (
     Event,
     EventEmitter,
     EventDispatcher,
+    on_event,
 )
 
 # 中断
@@ -171,6 +172,7 @@ __all__ = [
     "Settings",
     # Agent
     "Agent",
+    "quick_chat",
     # 工具
     "Tool",
     "FunctionTool",
@@ -180,6 +182,7 @@ __all__ = [
     "Event",
     "EventEmitter",
     "EventDispatcher",
+    "on_event",
     # 中断
     "InterruptToken",
     "InterruptHandler",

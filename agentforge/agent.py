@@ -65,7 +65,11 @@ class Agent:
     3. sync() - 同步记忆数据
 
     使用示例：
-        agent = Agent(provider, settings)
+        # 简化方式（自动选择 Provider）
+        agent = Agent(model="gpt-4", api_key="...")
+
+        # 完整方式（显式 Provider）
+        agent = Agent(provider=provider, settings=settings)
 
         # 添加记忆提供者
         agent.add_memory("session", InMemoryProvider())
@@ -85,7 +89,9 @@ class Agent:
 
     def __init__(
         self,
-        provider: "Provider",
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        provider: Optional["Provider"] = None,
         settings: Optional[Settings] = None,
         tools: Optional[List[Union[Tool, Callable]]] = None,
         approval_callback: Optional[ApprovalCallback] = None,
@@ -95,8 +101,18 @@ class Agent:
     ):
         """初始化 Agent。
 
+        支持两种初始化方式：
+
+        1. 简化方式（自动选择 Provider）：
+           Agent(model="gpt-4", api_key="...")
+
+        2. 完整方式（显式 Provider）：
+           Agent(provider=provider, settings=settings)
+
         Args:
-            provider: Provider 实例
+            model: 模型名称（简化方式）
+            api_key: API 密钥（简化方式）
+            provider: Provider 实例（完整方式）
             settings: 配置对象（可选）
             tools: 工具列表（可选）
             approval_callback: 审批回调（可选）
@@ -104,8 +120,16 @@ class Agent:
             memory_manager: 记忆管理器（可选）
             skill_registry: 技能注册表（可选）
         """
+        # 自动选择 Provider
+        if provider is None:
+            provider = self._auto_select_provider(model, api_key)
+
+        # 创建默认 Settings
+        if settings is None:
+            settings = Settings(model=model or "default")
+
         self._provider = provider
-        self._settings = settings or Settings()
+        self._settings = settings
 
         # 初始化组件
         self._compressor = ContextCompressor(self._settings.compression)
@@ -820,3 +844,98 @@ class Agent:
             "api_call_count": self._api_call_count,
             "rate_limit_state": self._rate_limit_state,
         }
+
+    # === Provider 自动选择 ===
+
+    @staticmethod
+    def _auto_select_provider(
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+    ) -> "Provider":
+        """自动选择可用的 Provider。
+
+        从已注册的 Profile 中选择有 API Key 配置的 Provider。
+        如果指定了 model，尝试匹配 Profile 的模型列表或别名。
+
+        Args:
+            model: 模型名称（可选）
+            api_key: API 密钥（可选）
+
+        Returns:
+            Provider 实例
+
+        Raises:
+            ConfigurationError: 没有可用的 Provider
+        """
+        from agentforge.providers.profile import get_profile, list_profiles
+        from agentforge.providers.registry import ProviderRegistry
+        from agentforge.types.errors import ConfigurationError
+
+        profiles = list_profiles()
+
+        # 收集可用的 Provider（有 API Key）
+        available = []
+        for name in profiles:
+            profile = get_profile(name)
+            if profile:
+                key = api_key or profile.get_api_key()
+                if key:
+                    available.append((name, profile))
+
+        if not available:
+            raise ConfigurationError(
+                "没有可用的 Provider，请配置 API Key 环境变量",
+                details={
+                    "hint": "设置 OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, MOONSHOT_API_KEY, DASHSCOPE_API_KEY 等",
+                    "available_profiles": list(profiles),
+                },
+            )
+
+        # 如果指定了 model，尝试匹配
+        if model:
+            model_lower = model.lower()
+            for name, profile in available:
+                # 检查模型列表
+                for m in profile.fallback_models:
+                    if model_lower.startswith(m.lower()) or m.lower().startswith(model_lower):
+                        return ProviderRegistry.create(name, api_key=api_key or profile.get_api_key())
+
+                # 检查 aliases
+                for alias in profile.aliases:
+                    if model_lower.startswith(alias.lower()):
+                        return ProviderRegistry.create(name, api_key=api_key or profile.get_api_key())
+
+        # 返回第一个可用的
+        name, profile = available[0]
+        logger.info(f"自动选择 Provider: {name}")
+        return ProviderRegistry.create(name, api_key=api_key or profile.get_api_key())
+
+
+# === 便捷函数 ===
+
+def quick_chat(
+    message: str,
+    model: str = "gpt-4",
+    api_key: Optional[str] = None,
+    **kwargs,
+) -> str:
+    """单次对话便捷函数。
+
+    适用于简单场景，不需要管理 Agent 生命周期。
+    自动选择 Provider 并返回文本响应。
+
+    Args:
+        message: 用户消息
+        model: 模型名称
+        api_key: API 密钥（可选，从环境变量获取）
+        **kwargs: 其他 Agent 参数
+
+    Returns:
+        响应文本内容
+
+    使用示例：
+        response = quick_chat("你好", model="deepseek-chat")
+    """
+    agent = Agent(model=model, api_key=api_key, **kwargs)
+    response = agent.run(message)
+    return response.content or ""
