@@ -2,6 +2,7 @@
 
 import tempfile
 import shutil
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,12 +10,218 @@ import pytest
 from agentforge.memory import (
     MemoryStore,
     MemoryManager,
+    MemoryStoreBase,
+    MemorySource,
+    MemoryType,
+    MemoryMetadata,
+    MemoryEntry,
     ENTRY_DELIMITER,
     DEFAULT_MEMORY_CHAR_LIMIT,
     DEFAULT_USER_CHAR_LIMIT,
 )
 from agentforge.context import ContextCompressor
 from agentforge.types import Message, TextContent, ToolUseContent, ToolResultContent
+
+
+class TestMemoryMetadata:
+    """测试记忆元数据。"""
+
+    def test_create_metadata(self):
+        """测试创建元数据。"""
+        metadata = MemoryMetadata(
+            source=MemorySource.USER,
+            memory_type=MemoryType.FACT,
+            importance=0.8,
+        )
+        assert metadata.source == MemorySource.USER
+        assert metadata.memory_type == MemoryType.FACT
+        assert metadata.importance == 0.8
+
+    def test_importance_validation(self):
+        """测试重要性验证。"""
+        # 有效范围
+        metadata = MemoryMetadata(importance=0.0)
+        assert metadata.importance == 0.0
+
+        metadata = MemoryMetadata(importance=1.0)
+        assert metadata.importance == 1.0
+
+        # 无效范围
+        with pytest.raises(ValueError):
+            MemoryMetadata(importance=1.5)
+
+        with pytest.raises(ValueError):
+            MemoryMetadata(importance=-0.1)
+
+    def test_expiration(self):
+        """测试过期检查。"""
+        # 未过期
+        metadata = MemoryMetadata(
+            expires_at=datetime.now() + timedelta(hours=1)
+        )
+        assert not metadata.is_expired()
+
+        # 已过期
+        metadata = MemoryMetadata(
+            expires_at=datetime.now() - timedelta(hours=1)
+        )
+        assert metadata.is_expired()
+
+        # 无过期时间
+        metadata = MemoryMetadata()
+        assert not metadata.is_expired()
+
+    def test_decay(self):
+        """测试时间衰减。"""
+        metadata = MemoryMetadata(
+            importance=1.0,
+            created_at=datetime.now() - timedelta(hours=10),
+        )
+        decayed = metadata.apply_decay(decay_rate=0.01)
+        # 10小时后衰减约 10%
+        assert decayed.importance < metadata.importance
+        assert decayed.importance >= 0.0
+
+    def test_touch(self):
+        """测试访问提升。"""
+        metadata = MemoryMetadata(importance=0.5)
+        touched = metadata.touch()
+        assert touched.importance > metadata.importance
+        assert touched.importance <= 1.0
+
+    def test_factory_methods(self):
+        """测试工厂方法。"""
+        # 用户事实
+        metadata = MemoryMetadata.user_fact(importance=0.7)
+        assert metadata.source == MemorySource.USER
+        assert metadata.memory_type == MemoryType.FACT
+
+        # Agent 推断
+        metadata = MemoryMetadata.agent_inferred(confidence=0.8)
+        assert metadata.source == MemorySource.AGENT
+        assert metadata.confidence == 0.8
+
+        # 用户偏好
+        metadata = MemoryMetadata.user_preference()
+        assert metadata.memory_type == MemoryType.PREFERENCE
+
+    def test_serialization(self):
+        """测试序列化。"""
+        metadata = MemoryMetadata(
+            source=MemorySource.USER,
+            importance=0.8,
+            tags=["python", "dev"],
+        )
+        data = metadata.to_dict()
+        assert data["source"] == "user"
+        assert data["importance"] == 0.8
+        assert "python" in data["tags"]
+
+        # 反序列化
+        restored = MemoryMetadata.from_dict(data)
+        assert restored.source == MemorySource.USER
+        assert restored.importance == 0.8
+        assert "python" in restored.tags
+
+
+class TestMemoryEntry:
+    """测试记忆条目。"""
+
+    def test_create_entry(self):
+        """测试创建条目。"""
+        entry = MemoryEntry(
+            content="用户喜欢 Python",
+            metadata=MemoryMetadata.user_fact(),
+        )
+        assert entry.content == "用户喜欢 Python"
+        assert entry.metadata.source == MemorySource.USER
+
+    def test_entry_serialization(self):
+        """测试条目序列化。"""
+        entry = MemoryEntry(
+            key="mem-001",
+            content="用户名叫张三",
+            metadata=MemoryMetadata.user_fact(importance=0.9),
+        )
+        data = entry.to_dict()
+        assert data["key"] == "mem-001"
+        assert data["content"] == "用户名叫张三"
+
+        restored = MemoryEntry.from_dict(data)
+        assert restored.key == "mem-001"
+        assert restored.content == "用户名叫张三"
+
+
+class TestMemoryStoreBase:
+    """测试 MemoryStoreBase 抽象类。"""
+
+    def test_is_abstract(self):
+        """测试抽象类不能直接实例化。"""
+        with pytest.raises(TypeError):
+            MemoryStoreBase()
+
+    def test_memory_store_inherits(self):
+        """测试 MemoryStore 继承自基类。"""
+        assert issubclass(MemoryStore, MemoryStoreBase)
+
+
+class TestMemoryExtractor:
+    """测试记忆提取器。"""
+
+    def test_rule_based_name_extraction(self):
+        """测试规则提取：名字。"""
+        from agentforge.memory import RuleBasedExtractor
+
+        extractor = RuleBasedExtractor()
+        memories = extractor.extract("我叫张三", "你好，张三！")
+
+        assert len(memories) == 1
+        assert "张三" in memories[0].content
+        assert memories[0].memory_type == MemoryType.FACT
+
+    def test_rule_based_preference_extraction(self):
+        """测试规则提取：偏好。"""
+        from agentforge.memory import RuleBasedExtractor
+
+        extractor = RuleBasedExtractor()
+        memories = extractor.extract("我喜欢使用 Python", "好的，我会用 Python")
+
+        assert len(memories) == 1
+        assert "偏好" in memories[0].content
+        assert memories[0].memory_type == MemoryType.PREFERENCE
+
+    def test_rule_based_no_extraction(self):
+        """测试规则提取：无值得记忆的内容。"""
+        from agentforge.memory import RuleBasedExtractor
+
+        extractor = RuleBasedExtractor()
+        memories = extractor.extract("今天天气怎么样？", "今天天气晴朗。")
+
+        assert len(memories) == 0
+
+    def test_extract_and_store(self):
+        """测试提取并存储。"""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            manager = MemoryManager()
+            manager.enable_memory_store(tmpdir)
+            manager.enable_auto_extraction()
+
+            # 提取并存储
+            memories = manager.extract_and_store(
+                user_message="我叫李四，我是一名开发者",
+                assistant_response="你好，李四！",
+            )
+
+            assert len(memories) >= 1
+            assert any("李四" in m.content for m in memories)
+
+            # 验证存储
+            store = manager.get_memory_store()
+            assert any("李四" in e for e in store.memory_entries)
+
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 class TestMemoryStore:

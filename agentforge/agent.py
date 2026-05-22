@@ -390,7 +390,8 @@ class Agent:
 
     def enable_memory_store(
         self,
-        base_path: str = "./memories",
+        base_path: Optional[str] = "./memories",
+        store: Optional["MemoryStoreBase"] = None,
         memory_char_limit: int = 2200,
         user_char_limit: int = 1375,
     ) -> None:
@@ -400,14 +401,25 @@ class Agent:
         - MEMORY.md: 事实记忆（有界 2200 chars）
         - USER.md: 用户偏好（有界 1375 chars）
 
+        支持两种方式：
+        1. 传入 base_path：使用默认的 MemoryStore 实现
+        2. 传入 store：使用自定义的 MemoryStoreBase 实现（如多用户存储）
+
         Args:
             base_path: 存储目录路径
+            store: 自定义 MemoryStoreBase 实例（优先级高于 base_path）
             memory_char_limit: MEMORY 文件字符限制
             user_char_limit: USER 文件字符限制
 
         使用示例：
+            # 使用默认存储
             agent = Agent(model="gpt-4")
             agent.enable_memory_store("./memories")
+
+            # 使用自定义存储（如多用户）
+            agent.enable_memory_store(
+                store=MultiUserMemoryStore("./memories", user_id="user-123")
+            )
 
             # 预取（加载 MemoryStore 并创建冻结快照）
             agent.prefetch()
@@ -426,6 +438,7 @@ class Agent:
 
         self._memory_manager.enable_memory_store(
             base_path=base_path,
+            store=store,
             memory_char_limit=memory_char_limit,
             user_char_limit=user_char_limit,
         )

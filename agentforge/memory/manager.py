@@ -14,7 +14,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from agentforge.memory.base import MemoryProvider
+from agentforge.memory.memory_store_base import MemoryStoreBase
 from agentforge.memory.memory_store import MemoryStore
+from agentforge.memory.metadata import MemoryType
+from agentforge.memory.extractor import (
+    MemoryExtractor,
+    RuleBasedExtractor,
+    HybridExtractor,
+    ExtractedMemory,
+    create_extractor,
+)
 from agentforge.events import EventType, EventDispatcher
 
 if TYPE_CHECKING:
@@ -115,7 +124,7 @@ class MemoryManager:
         self._max_workers = max_workers
 
         # MemoryStore（长期记忆）
-        self._memory_store: Optional[MemoryStore] = None
+        self._memory_store: Optional[MemoryStoreBase] = None
         if memory_store_path:
             self.enable_memory_store(memory_store_path)
 
@@ -129,6 +138,10 @@ class MemoryManager:
 
         # 会话状态（用于生命周期钩子）
         self._session_started = False
+
+        # 自动提取器
+        self._extractor: Optional[MemoryExtractor] = None
+        self._auto_extraction_enabled = False
 
     def register(
         self,
@@ -178,23 +191,46 @@ class MemoryManager:
 
     def enable_memory_store(
         self,
-        base_path: str,
+        base_path: Optional[str] = None,
+        store: Optional[MemoryStoreBase] = None,
         memory_char_limit: int = 2200,
         user_char_limit: int = 1375,
     ) -> None:
         """启用 MemoryStore（长期记忆）。
 
+        支持两种方式：
+        1. 传入 base_path：使用默认的 MemoryStore 实现
+        2. 传入 store：使用自定义的 MemoryStoreBase 实现
+
         Args:
-            base_path: 存储目录路径
-            memory_char_limit: MEMORY 文件字符限制
-            user_char_limit: USER 文件字符限制
+            base_path: 存储目录路径（使用默认 MemoryStore 时必填）
+            store: 自定义 MemoryStoreBase 实例（优先级高于 base_path）
+            memory_char_limit: MEMORY 文件字符限制（默认实现）
+            user_char_limit: USER 文件字符限制（默认实现）
+
+        示例：
+            # 使用默认存储
+            manager.enable_memory_store(base_path="./memories")
+
+            # 使用自定义存储（如多用户）
+            manager.enable_memory_store(
+                store=MultiUserMemoryStore("./memories", user_id="user-123")
+            )
         """
-        self._memory_store = MemoryStore(
-            base_path=base_path,
-            memory_char_limit=memory_char_limit,
-            user_char_limit=user_char_limit,
-        )
-        logger.debug(f"已启用 MemoryStore: {base_path}")
+        if store is not None:
+            # 使用自定义存储
+            self._memory_store = store
+            logger.debug(f"已启用自定义 MemoryStore: {type(store).__name__}")
+        elif base_path is not None:
+            # 使用默认存储
+            self._memory_store = MemoryStore(
+                base_path=base_path,
+                memory_char_limit=memory_char_limit,
+                user_char_limit=user_char_limit,
+            )
+            logger.debug(f"已启用 MemoryStore: {base_path}")
+        else:
+            raise ValueError("必须提供 base_path 或 store 参数")
 
     def disable_memory_store(self) -> None:
         """禁用 MemoryStore。"""
@@ -204,7 +240,7 @@ class MemoryManager:
             self._memory_store = None
             logger.debug("已禁用 MemoryStore")
 
-    def get_memory_store(self) -> Optional[MemoryStore]:
+    def get_memory_store(self) -> Optional[MemoryStoreBase]:
         """获取 MemoryStore 实例。"""
         return self._memory_store
 
@@ -248,6 +284,90 @@ class MemoryManager:
         if not self._memory_store:
             return ""
         return self._memory_store.format_for_system_prompt(target)
+
+    # === 自动记忆提取 ===
+
+    def enable_auto_extraction(
+        self,
+        extractor: Optional[MemoryExtractor] = None,
+        provider: Optional["Provider"] = None,
+        use_llm: bool = False,
+    ) -> None:
+        """启用自动记忆提取。
+
+        在对话过程中自动提取值得记忆的信息。
+
+        Args:
+            extractor: 自定义提取器（可选）
+            provider: LLM Provider（用于 LLM 提取）
+            use_llm: 是否使用 LLM 辅助提取
+
+        示例：
+            # 使用规则提取
+            manager.enable_auto_extraction()
+
+            # 使用 LLM 辅助提取
+            manager.enable_auto_extraction(provider=openai_provider, use_llm=True)
+
+            # 使用自定义提取器
+            manager.enable_auto_extraction(extractor=my_extractor)
+        """
+        if extractor is not None:
+            self._extractor = extractor
+        else:
+            self._extractor = create_extractor(provider=provider, use_llm=use_llm)
+
+        self._auto_extraction_enabled = True
+        logger.debug(f"已启用自动记忆提取: {type(self._extractor).__name__}")
+
+    def disable_auto_extraction(self) -> None:
+        """禁用自动记忆提取。"""
+        self._auto_extraction_enabled = False
+        self._extractor = None
+        logger.debug("已禁用自动记忆提取")
+
+    def is_auto_extraction_enabled(self) -> bool:
+        """检查是否启用了自动提取。"""
+        return self._auto_extraction_enabled
+
+    def extract_and_store(
+        self,
+        user_message: str,
+        assistant_response: str,
+        sync: bool = True,
+    ) -> List[ExtractedMemory]:
+        """从对话中提取并存储记忆。
+
+        Args:
+            user_message: 用户消息
+            assistant_response: 助手回复
+            sync: 是否立即同步到磁盘
+
+        Returns:
+            提取的记忆列表
+        """
+        if not self._auto_extraction_enabled or not self._extractor:
+            return []
+
+        if not self._memory_store:
+            logger.warning("MemoryStore 未启用，无法存储提取的记忆")
+            return []
+
+        # 提取记忆
+        memories = self._extractor.extract(user_message, assistant_response)
+
+        # 存储记忆
+        for memory in memories:
+            target = "memory" if memory.memory_type == MemoryType.FACT else "user"
+            self._memory_store.add_entry(target, memory.content, sync=False)
+
+        if sync and memories:
+            self._memory_store.sync_to_disk()
+
+        if memories:
+            logger.debug(f"自动提取并存储了 {len(memories)} 条记忆")
+
+        return memories
 
     # === 生命周期钩子 ===
 

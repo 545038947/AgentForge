@@ -14,6 +14,8 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from agentforge.memory.memory_store_base import MemoryStoreBase
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +38,7 @@ DEFAULT_MEMORY_CHAR_LIMIT = 2200
 DEFAULT_USER_CHAR_LIMIT = 1375
 
 
-class MemoryStore:
+class MemoryStore(MemoryStoreBase):
     """长期记忆存储。
 
     实现有界的长期记忆存储，支持：
