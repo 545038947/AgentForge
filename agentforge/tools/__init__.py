@@ -29,6 +29,18 @@ from agentforge.tools.guardrails import (
     IDEMPOTENT_TOOL_NAMES,
     MUTATING_TOOL_NAMES,
 )
+from agentforge.tools.checkpoint import (
+    CheckpointManager,
+    DEFAULT_EXCLUDES,
+)
+from agentforge.tools.toolsets import (
+    ToolsetDefinition,
+    ToolsetRegistry,
+    register_toolset,
+    get_toolset,
+    resolve_toolset,
+    BUILTIN_TOOLSETS,
+)
 
 __all__ = [
     # base
@@ -56,4 +68,14 @@ __all__ = [
     "classify_tool_failure",
     "IDEMPOTENT_TOOL_NAMES",
     "MUTATING_TOOL_NAMES",
+    # checkpoint
+    "CheckpointManager",
+    "DEFAULT_EXCLUDES",
+    # toolsets
+    "ToolsetDefinition",
+    "ToolsetRegistry",
+    "register_toolset",
+    "get_toolset",
+    "resolve_toolset",
+    "BUILTIN_TOOLSETS",
 ]
