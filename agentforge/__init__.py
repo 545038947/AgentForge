@@ -38,6 +38,9 @@ from agentforge.types.errors import (
     ContextError,
     ContextCompressionError,
     InterruptException,
+    classify_api_error,
+    ErrorReason,
+    ClassifiedError,
 )
 
 # 配置
@@ -65,6 +68,67 @@ from agentforge.events import (
 from agentforge.interrupt import (
     InterruptToken,
     InterruptHandler,
+)
+
+# 记忆
+from agentforge.memory import (
+    MemoryProvider,
+    InMemoryProvider,
+    FileBasedProvider,
+    MemoryBlock,
+    MemoryManager,
+    sanitize_context,
+    StreamingContextScrubber,
+)
+
+# 技能
+from agentforge.skills import (
+    Skill,
+    SkillMetadata,
+    FunctionSkill,
+    SkillRegistry,
+    SkillLoader,
+    SkillPackage,
+    SkillHotReloader,
+    register_skill,
+    get_skill,
+    list_skills,
+    discover_and_load_skills,
+)
+
+# 核心功能
+from agentforge.core import (
+    IterationBudget,
+    jittered_backoff,
+    RetryPolicy,
+    RetryContext,
+    FallbackProvider,
+    FallbackChain,
+    ExecutionConfig,
+    ExecutionState,
+    ExecutionResult,
+    ExecutionEngine,
+    CredentialPool,
+    PooledCredential,
+    ModelCapabilities,
+    DefaultModelMetadataProvider,
+)
+
+# 工具集
+from agentforge.tools.toolsets import (
+    ToolsetDefinition,
+    ToolsetRegistry,
+    register_toolset,
+    get_toolset,
+    resolve_toolset,
+)
+
+# 会话管理
+from agentforge.session import (
+    SessionProvider,
+    SessionInfo,
+    MessageRecord,
+    InMemorySessionProvider,
 )
 
 __all__ = [
@@ -100,6 +164,9 @@ __all__ = [
     "ContextError",
     "ContextCompressionError",
     "InterruptException",
+    "classify_api_error",
+    "ErrorReason",
+    "ClassifiedError",
     # 配置
     "Settings",
     # Agent
@@ -116,4 +183,51 @@ __all__ = [
     # 中断
     "InterruptToken",
     "InterruptHandler",
+    # 记忆
+    "MemoryProvider",
+    "InMemoryProvider",
+    "FileBasedProvider",
+    "MemoryBlock",
+    "MemoryManager",
+    "sanitize_context",
+    "StreamingContextScrubber",
+    # 技能
+    "Skill",
+    "SkillMetadata",
+    "FunctionSkill",
+    "SkillRegistry",
+    "SkillLoader",
+    "SkillPackage",
+    "SkillHotReloader",
+    "register_skill",
+    "get_skill",
+    "list_skills",
+    "discover_and_load_skills",
+    # 核心功能
+    "IterationBudget",
+    "jittered_backoff",
+    "RetryPolicy",
+    "RetryContext",
+    "FallbackProvider",
+    "FallbackChain",
+    "ExecutionConfig",
+    "ExecutionState",
+    "ExecutionResult",
+    "ExecutionEngine",
+    "CredentialPool",
+    "PooledCredential",
+    # 模型能力
+    "ModelCapabilities",
+    "DefaultModelMetadataProvider",
+    # 工具集
+    "ToolsetDefinition",
+    "ToolsetRegistry",
+    "register_toolset",
+    "get_toolset",
+    "resolve_toolset",
+    # 会话管理
+    "SessionProvider",
+    "SessionInfo",
+    "MessageRecord",
+    "InMemorySessionProvider",
 ]
