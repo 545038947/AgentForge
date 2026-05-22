@@ -21,17 +21,25 @@ class EventType(enum.Enum):
     AGENT_START = "agent.start"
     AGENT_END = "agent.end"
     AGENT_INTERRUPT = "agent.interrupt"
+    AGENT_THINKING = "agent.thinking"       # 思考过程（流式）
+    AGENT_REASONING = "agent.reasoning"     # 推理过程（流式）
+    AGENT_STATUS = "agent.status"           # 状态更新
 
     # 工具执行
     TOOL_START = "tool.start"
     TOOL_END = "tool.end"
     TOOL_ERROR = "tool.error"
+    TOOL_PROGRESS = "tool.progress"         # 工具执行进度
     TOOL_APPROVAL_REQUIRED = "tool.approval_required"
+    TOOL_GENERATED = "tool.generated"       # 工具调用生成
 
     # Provider 调用
     PROVIDER_REQUEST = "provider.request"
     PROVIDER_RESPONSE = "provider.response"
     PROVIDER_ERROR = "provider.error"
+    STREAM_DELTA = "stream.delta"           # 流式 Token 增量
+    STREAM_CHUNK = "stream.chunk"           # 流式响应块
+    STREAM_END = "stream.end"               # 流式结束
 
     # 上下文压缩
     COMPRESSION_START = "compression.start"
@@ -41,9 +49,15 @@ class EventType(enum.Enum):
     DELEGATION_START = "delegation.start"
     DELEGATION_END = "delegation.end"
 
-    # 流式响应
-    STREAM_CHUNK = "stream.chunk"
-    STREAM_END = "stream.end"
+    # 用户交互
+    CLARIFY_REQUEST = "clarify.request"     # 澄清请求
+    INTERIM_ASSISTANT = "interim.assistant" # 中间 assistant 消息
+
+    # 记忆系统
+    MEMORY_PREFETCH = "memory.prefetch"
+    MEMORY_PREFETCH_DONE = "memory.prefetch_done"
+    MEMORY_SYNC = "memory.sync"
+    MEMORY_SYNC_DONE = "memory.sync_done"
 
 
 @dataclass

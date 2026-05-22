@@ -369,3 +369,54 @@ class TestEventDispatcher:
         dispatcher.dispatch(EventType.TOOL_START)
 
         assert len(received) == 1
+
+
+class TestExtendedEventTypes:
+    """扩展事件类型测试。"""
+
+    def test_agent_thinking_event(self):
+        """测试 AGENT_THINKING 事件。"""
+        assert hasattr(EventType, "AGENT_THINKING")
+        assert EventType.AGENT_THINKING.value == "agent.thinking"
+
+    def test_agent_reasoning_event(self):
+        """测试 AGENT_REASONING 事件。"""
+        assert hasattr(EventType, "AGENT_REASONING")
+        assert EventType.AGENT_REASONING.value == "agent.reasoning"
+
+    def test_tool_progress_event(self):
+        """测试 TOOL_PROGRESS 事件。"""
+        assert hasattr(EventType, "TOOL_PROGRESS")
+        assert EventType.TOOL_PROGRESS.value == "tool.progress"
+
+    def test_stream_delta_event(self):
+        """测试 STREAM_DELTA 事件。"""
+        assert hasattr(EventType, "STREAM_DELTA")
+        assert EventType.STREAM_DELTA.value == "stream.delta"
+
+    def test_clarify_request_event(self):
+        """测试 CLARIFY_REQUEST 事件。"""
+        assert hasattr(EventType, "CLARIFY_REQUEST")
+        assert EventType.CLARIFY_REQUEST.value == "clarify.request"
+
+    def test_all_new_event_types(self):
+        """测试所有新增事件类型。"""
+        new_types = [
+            "AGENT_THINKING",
+            "AGENT_REASONING",
+            "AGENT_STATUS",
+            "TOOL_PROGRESS",
+            "STREAM_DELTA",
+            "STREAM_CHUNK",
+            "STREAM_END",
+            "CLARIFY_REQUEST",
+            "INTERIM_ASSISTANT",
+            "TOOL_GENERATED",
+            "MEMORY_PREFETCH",
+            "MEMORY_PREFETCH_DONE",
+            "MEMORY_SYNC",
+            "MEMORY_SYNC_DONE",
+        ]
+
+        for type_name in new_types:
+            assert hasattr(EventType, type_name), f"Missing EventType.{type_name}"
