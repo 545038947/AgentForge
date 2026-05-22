@@ -59,6 +59,81 @@ class ToolCallGuardrailConfig:
     idempotent_tools: frozenset = field(default_factory=lambda: IDEMPOTENT_TOOL_NAMES)
     mutating_tools: frozenset = field(default_factory=lambda: MUTATING_TOOL_NAMES)
 
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any] | None) -> "ToolCallGuardrailConfig":
+        """从配置字典构建护栏配置。
+
+        支持 config.yaml 中的 `tool_loop_guardrails` 配置节。
+
+        Args:
+            data: 配置字典
+
+        Returns:
+            ToolCallGuardrailConfig 实例
+        """
+        if not isinstance(data, Mapping):
+            return cls()
+
+        warn_after = data.get("warn_after")
+        if not isinstance(warn_after, Mapping):
+            warn_after = {}
+
+        hard_stop_after = data.get("hard_stop_after")
+        if not isinstance(hard_stop_after, Mapping):
+            hard_stop_after = {}
+
+        defaults = cls()
+        return cls(
+            warnings_enabled=_as_bool(data.get("warnings_enabled"), defaults.warnings_enabled),
+            hard_stop_enabled=_as_bool(data.get("hard_stop_enabled"), defaults.hard_stop_enabled),
+            exact_failure_warn_after=_positive_int(
+                warn_after.get("exact_failure", data.get("exact_failure_warn_after")),
+                defaults.exact_failure_warn_after,
+            ),
+            same_tool_failure_warn_after=_positive_int(
+                warn_after.get("same_tool_failure", data.get("same_tool_failure_warn_after")),
+                defaults.same_tool_failure_warn_after,
+            ),
+            no_progress_warn_after=_positive_int(
+                warn_after.get("idempotent_no_progress", data.get("no_progress_warn_after")),
+                defaults.no_progress_warn_after,
+            ),
+            exact_failure_block_after=_positive_int(
+                hard_stop_after.get("exact_failure", data.get("exact_failure_block_after")),
+                defaults.exact_failure_block_after,
+            ),
+            same_tool_failure_halt_after=_positive_int(
+                hard_stop_after.get("same_tool_failure", data.get("same_tool_failure_halt_after")),
+                defaults.same_tool_failure_halt_after,
+            ),
+            no_progress_block_after=_positive_int(
+                hard_stop_after.get("idempotent_no_progress", data.get("no_progress_block_after")),
+                defaults.no_progress_block_after,
+            ),
+        )
+
+
+def _as_bool(value: Any, default: bool) -> bool:
+    """转换为布尔值。"""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes")
+    return bool(value)
+
+
+def _positive_int(value: Any, default: int) -> int:
+    """转换为正整数。"""
+    if value is None:
+        return default
+    try:
+        result = int(value)
+        return result if result > 0 else default
+    except (TypeError, ValueError):
+        return default
+
 
 @dataclass(frozen=True)
 class ToolCallSignature:
