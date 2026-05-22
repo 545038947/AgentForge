@@ -79,6 +79,10 @@ class Settings(BaseModel):
     max_tokens: int = Field(default=4096, gt=0)
     temperature: float = Field(default=1.0, ge=0, le=2)
 
+    # 执行控制
+    max_retries: int = Field(default=3, ge=0)
+    max_iterations: int = Field(default=10, ge=1)
+
     # 子配置
     provider: ProviderSettings = Field(default_factory=ProviderSettings)
     compression: CompressionSettings = Field(default_factory=CompressionSettings)

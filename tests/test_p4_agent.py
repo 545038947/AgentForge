@@ -339,3 +339,117 @@ class TestP4Integration:
 
         # 清理
         orchestrator.shutdown()
+
+
+# ── Agent 活动追踪测试 ──────────────────────────────────────────────
+
+class TestAgentActivityTracking:
+    """Agent 活动追踪测试。"""
+
+    def test_activity_timestamp(self):
+        """测试活动时间戳更新。"""
+        from agentforge.agent import Agent
+        from agentforge.providers.builtins import OpenAIProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+        settings = Settings(model="gpt-4")
+        agent = Agent(provider=provider, settings=settings)
+
+        # 获取初始时间戳
+        initial_ts = agent._last_activity_ts
+        assert initial_ts > 0
+
+        # 等待一小段时间
+        time.sleep(0.1)
+
+        # 触发活动更新
+        agent._touch_activity("测试活动")
+
+        # 时间戳应该更新
+        assert agent._last_activity_ts > initial_ts
+        assert agent._last_activity_desc == "测试活动"
+
+    def test_activity_summary(self):
+        """测试活动摘要。"""
+        from agentforge.agent import Agent
+        from agentforge.providers.builtins import OpenAIProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+        settings = Settings(model="gpt-4")
+        agent = Agent(provider=provider, settings=settings)
+
+        agent._touch_activity("处理请求")
+        agent._api_call_count = 5
+
+        summary = agent.get_activity_summary()
+
+        assert "last_activity_ts" in summary
+        assert "last_activity_desc" in summary
+        assert summary["last_activity_desc"] == "处理请求"
+        assert summary["api_call_count"] == 5
+        assert "seconds_since_activity" in summary
+
+    def test_rate_limit_state(self):
+        """测试速率限制状态。"""
+        from agentforge.agent import Agent
+        from agentforge.providers.builtins import OpenAIProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+        settings = Settings(model="gpt-4")
+        agent = Agent(provider=provider, settings=settings)
+
+        # 初始状态为 None
+        assert agent._rate_limit_state is None
+
+        # 模拟捕获速率限制
+        class MockResponse:
+            headers = {
+                "x-ratelimit-remaining": "10",
+                "x-ratelimit-reset": "60",
+                "x-ratelimit-limit": "100",
+            }
+
+        agent._capture_rate_limit_state(MockResponse())
+
+        # 应该有状态了
+        assert agent._rate_limit_state is not None
+        assert agent._rate_limit_state["remaining"] == "10"
+
+    def test_rate_limit_state_none_response(self):
+        """测试空响应不更新速率限制状态。"""
+        from agentforge.agent import Agent
+        from agentforge.providers.builtins import OpenAIProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+        settings = Settings(model="gpt-4")
+        agent = Agent(provider=provider, settings=settings)
+
+        # 空响应
+        agent._capture_rate_limit_state(None)
+
+        # 状态应该仍为 None
+        assert agent._rate_limit_state is None
+
+    def test_initial_activity_desc(self):
+        """测试初始活动描述。"""
+        from agentforge.agent import Agent
+        from agentforge.providers.builtins import OpenAIProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+        settings = Settings(model="gpt-4")
+        agent = Agent(provider=provider, settings=settings)
+
+        # 初始描述应该是"初始化"
+        assert agent._last_activity_desc == "初始化"
+
+    def test_api_call_count_initial(self):
+        """测试 API 调用计数初始值。"""
+        from agentforge.agent import Agent
+        from agentforge.providers.builtins import OpenAIProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+        settings = Settings(model="gpt-4")
+        agent = Agent(provider=provider, settings=settings)
+
+        # 初始计数应该是 0
+        assert agent._api_call_count == 0
