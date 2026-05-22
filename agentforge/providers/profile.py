@@ -287,6 +287,22 @@ DEEPSEEK_PROFILE = ProviderProfile(
     supports_reasoning=True,  # deepseek-reasoner
 )
 
+OLLAMA_PROFILE = ProviderProfile(
+    name="ollama",
+    api_mode="chat_completions",
+    aliases=("local",),
+    display_name="Ollama (本地模型)",
+    description="Ollama 本地和远程服务器",
+    signup_url="https://ollama.com/",
+    env_vars=(),  # Ollama 不需要 API Key
+    base_url="http://localhost:11434/v1",
+    fallback_models=("llama3.2", "llama3.1", "gemma2", "mistral"),
+    supports_tools=True,  # 取决于模型
+    supports_streaming=True,
+    supports_vision=False,  # 取决于模型
+    supports_health_check=True,
+)
+
 # Provider Profile 注册表
 _PROFILE_REGISTRY: Dict[str, ProviderProfile] = {
     "openai": OPENAI_PROFILE,
@@ -294,6 +310,7 @@ _PROFILE_REGISTRY: Dict[str, ProviderProfile] = {
     "moonshot": MOONSHOT_PROFILE,
     "qwen": QWEN_PROFILE,
     "deepseek": DEEPSEEK_PROFILE,
+    "ollama": OLLAMA_PROFILE,
 }
 
 

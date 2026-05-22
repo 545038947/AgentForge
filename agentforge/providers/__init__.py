@@ -23,6 +23,7 @@ from agentforge.providers.profile import (
     MOONSHOT_PROFILE,
     QWEN_PROFILE,
     DEEPSEEK_PROFILE,
+    OLLAMA_PROFILE,
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "MOONSHOT_PROFILE",
     "QWEN_PROFILE",
     "DEEPSEEK_PROFILE",
+    "OLLAMA_PROFILE",
 ]
