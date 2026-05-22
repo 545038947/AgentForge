@@ -11,7 +11,7 @@ import logging
 import threading
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Union
 
 from agentforge.delegation.config import DelegationConfig, IsolationConfig, TaskSpec
 from agentforge.delegation.result import (
@@ -480,15 +480,37 @@ class DelegationManager:
         blocked_tools = self._config.isolation.blocked_tools
 
         # 根据任务指定的工具集过滤
+        allowed_tool_names: Optional[Set[str]] = None
         if task.toolsets:
-            # TODO: 实现工具集过滤
-            pass
+            # 解析工具集，获取允许的工具名称
+            from agentforge.tools.toolsets import resolve_toolset
+
+            allowed_tool_names = set()
+            for toolset_name in task.toolsets:
+                tools_in_toolset = resolve_toolset(toolset_name)
+                allowed_tool_names.update(tools_in_toolset)
+
+            logger.debug(
+                f"任务工具集 {task.toolsets} 解析为工具: {allowed_tool_names}"
+            )
 
         # 过滤被阻止的工具
         child_tools = []
         for name, tool in parent_tools.items():
-            if name not in blocked_tools:
-                child_tools.append(tool)
+            # 检查是否在阻止列表
+            if name in blocked_tools:
+                continue
+
+            # 检查是否在允许的工具集范围内
+            if allowed_tool_names is not None:
+                # 使用工具名称或别名检查
+                tool_names = {name}
+                if hasattr(tool, "name"):
+                    tool_names.add(tool.name)
+                if not tool_names.intersection(allowed_tool_names):
+                    continue
+
+            child_tools.append(tool)
 
         return child_tools
 

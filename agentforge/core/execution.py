@@ -474,8 +474,8 @@ class ExecutionEngine:
         if classified.reason == ErrorReason.image_too_large:
             if not self._state.image_shrink_retry_attempted:
                 self._state.image_shrink_retry_attempted = True
-                # TODO: 实现图片缩小逻辑
-                return None
+                shrunk_messages = self._shrink_images(messages)
+                return {"messages": shrunk_messages}
 
         return None
 
@@ -552,6 +552,130 @@ class ExecutionEngine:
             # 不复制 reasoning_details
             cleared.append(new_msg)
         return cleared
+
+    def _shrink_images(
+        self,
+        messages: List[Message],
+        max_dimension: int = 1024,
+    ) -> List[Message]:
+        """缩小消息中的图片尺寸。
+
+        当图片过大导致 API 错误时，尝试缩小图片尺寸以继续处理。
+        支持缩小 base64 编码的图片，URL 图片会被移除（无法本地处理）。
+
+        Args:
+            messages: 消息列表
+            max_dimension: 最大尺寸（宽/高），默认 1024
+
+        Returns:
+            处理后的消息列表
+        """
+        from agentforge.types import ImageContent, TextContent
+
+        shrunk_messages = []
+        for msg in messages:
+            if isinstance(msg.content, str):
+                # 纯文本消息，无需处理
+                shrunk_messages.append(msg)
+                continue
+
+            # 多模态消息，处理图片
+            new_content = []
+            for block in msg.content:
+                if isinstance(block, ImageContent):
+                    # 尝试缩小图片
+                    shrunk_image = self._shrink_single_image(block, max_dimension)
+                    if shrunk_image:
+                        new_content.append(shrunk_image)
+                    else:
+                        # 无法处理 URL 图片或缩小失败，添加文本说明
+                        new_content.append(TextContent(
+                            text="[图片已被移除（尺寸过大）]"
+                        ))
+                else:
+                    new_content.append(block)
+
+            shrunk_messages.append(Message(
+                role=msg.role,
+                content=new_content,
+            ))
+
+        return shrunk_messages
+
+    def _shrink_single_image(
+        self,
+        image: "ImageContent",
+        max_dimension: int,
+    ) -> Optional["ImageContent"]:
+        """缩小单个图片。
+
+        Args:
+            image: 图片内容块
+            max_dimension: 最大尺寸
+
+        Returns:
+            缩小后的图片，或 None（无法处理）
+        """
+        import base64
+        import io
+
+        # URL 图片无法本地处理
+        if image.url and not image.base64:
+            logger.warning("URL 图片无法本地缩小，将被移除")
+            return None
+
+        # 尝试解码和缩小 base64 图片
+        try:
+            # 解码 base64
+            image_data = base64.b64decode(image.base64)
+
+            # 尝试使用 PIL 处理
+            try:
+                from PIL import Image as PILImage
+
+                pil_img = PILImage.open(io.BytesIO(image_data))
+
+                # 计算缩小比例
+                width, height = pil_img.size
+                if width > max_dimension or height > max_dimension:
+                    # 保持比例缩小
+                    ratio = min(max_dimension / width, max_dimension / height)
+                    new_width = int(width * ratio)
+                    new_height = int(height * ratio)
+
+                    # 缩小图片
+                    pil_img = pil_img.resize((new_width, new_height), PILImage.LANCZOS)
+
+                    # 转换为 base64
+                    buffer = io.BytesIO()
+                    # 保持原格式或转换为 JPEG（默认）
+                    format_name = "JPEG" if image.media_type == "image/jpeg" else "PNG"
+                    pil_img.save(buffer, format=format_name)
+                    shrunk_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+                    logger.info(
+                        f"图片缩小: {width}x{height} -> {new_width}x{new_height}"
+                    )
+
+                    return ImageContent(
+                        base64=shrunk_base64,
+                        media_type=f"image/{format_name.lower()}",
+                    )
+                else:
+                    # 图片尺寸已符合要求
+                    return image
+
+            except ImportError:
+                # PIL 未安装，记录警告并跳过
+                logger.warning(
+                    "PIL 未安装，无法缩小图片。"
+                    "请安装 Pillow: pip install Pillow"
+                )
+                return None
+
+        except Exception as e:
+            logger.warning(f"图片缩小失败: {e}")
+            return None
 
     def _estimate_tokens(self, messages: List[Message]) -> int:
         """估算消息 Token 数。"""
