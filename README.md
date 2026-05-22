@@ -407,6 +407,154 @@ except ToolExecutionError as e:
     print(f"工具执行错误: {e}")
 ```
 
+## 上下文管理
+
+Agent 的上下文管理是**完全自动**的，包括消息历史维护和智能压缩。
+
+### 自动上下文维护
+
+每次对话时，Agent 自动维护消息历史：
+
+```python
+from agentforge import Agent
+
+agent = Agent(model="gpt-4")
+
+# 第一次对话
+response1 = agent.run("你好，我叫张三")  # 自动添加用户消息和 assistant 响应
+
+# 第二次对话 - Agent 会记住之前的对话
+response2 = agent.run("我叫什么名字？")  # Agent 会回答 "张三"
+
+# 第三次对话 - 上下文继续累积
+response3 = agent.run("我们之前聊了什么？")  # Agent 会回顾整个对话历史
+```
+
+### 自动上下文压缩
+
+当上下文 Token 数超过阈值时，Agent 会自动压缩：
+
+```python
+from agentforge import Agent, Settings
+
+# 配置压缩参数
+settings = Settings(
+    compression_max_tokens=100000,  # 触发压缩的阈值
+    compression_protect_head=3,     # 保护头部消息数（系统提示等）
+    compression_protect_tail=5,     # 保护尾部消息数（最近对话）
+)
+
+agent = Agent(model="gpt-4", settings=settings)
+
+# 长对话 - 自动压缩
+for i in range(100):
+    response = agent.run(f"问题 {i}: ...")
+    # 当 Token 超过 100000 时，自动压缩中间消息
+```
+
+### 压缩策略
+
+压缩时采用**保护策略**：
+
+```
+[系统提示] [消息1] [消息2] ... [消息N-5] [消息N-4] [消息N-3] [消息N-2] [消息N-1] [消息N]
+    ↑                                                            ↑
+ 保护头部                                                      保护尾部
+(不会压缩)                                                   (不会压缩)
+                    ↑
+              压缩中间
+            (摘要替换)
+```
+
+- **保护头部**：系统提示、初始指令等关键消息不会被压缩
+- **保护尾部**：最近的对话保持完整，确保当前上下文准确
+- **压缩中间**：中间消息会被摘要替换，保留关键信息
+
+### 手动控制
+
+```python
+from agentforge import Agent
+
+agent = Agent(model="gpt-4")
+
+# 清空当前会话历史
+agent.clear()
+
+# 设置系统提示
+agent._message_manager.set_system_prompt("你是一个专业的 Python 开发者")
+
+# 查看当前消息数量
+print(f"消息数量: {len(agent._message_manager)}")
+```
+
+### 跨会话持久化
+
+默认情况下，消息历史仅在内存中。要持久化到存储：
+
+```python
+from agentforge import Agent, InMemoryProvider, MemoryManager
+
+# 创建记忆管理器
+memory_manager = MemoryManager()
+memory_manager.add_provider("conversation", InMemoryProvider())
+
+# 创建带持久化的 Agent
+agent = Agent(model="gpt-4", memory_manager=memory_manager)
+
+# 预取之前的对话历史
+agent.prefetch()
+
+# 运行对话
+response = agent.run("你好")
+
+# 同步保存到存储
+agent.sync()
+```
+
+### 上下文流程图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Agent 对话流程                          │
+└─────────────────────────────────────────────────────────────┘
+
+用户消息 ──→ add_user_message()
+                    │
+                    ▼
+            存储到 _messages
+                    │
+                    ▼
+    调用 run()/stream() ──→ get_context()
+                                │
+                                ▼
+                        检查 Token 数量
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+              超过阈值                  未超过阈值
+                    │                       │
+                    ▼                       │
+              自动压缩                       │
+            (保护头尾)                       │
+                    │                       │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    返回上下文给 Provider
+                                │
+                                ▼
+                    Provider 生成响应
+                                │
+                                ▼
+            add_assistant_message() ←── assistant 响应
+                    │
+                    ▼
+            存储到 _messages
+                    │
+                    ▼
+            等待下一轮对话...
+```
+
 ## 测试
 
 ```bash
