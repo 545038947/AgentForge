@@ -330,9 +330,19 @@ class DelegationManager:
             # 构建子 Agent 系统提示
             system_prompt = self._build_child_prompt(task)
 
-            # 模拟执行（实际实现需要创建子 Agent）
-            # 这里提供一个简化的实现框架
-            duration = time.monotonic() - start_time
+            # 创建子 Agent
+            child_agent = self._create_child_agent(task, system_prompt)
+
+            if child_agent is None:
+                # 无法创建子 Agent，返回模拟结果
+                duration = time.monotonic() - start_time
+                return TaskResult(
+                    task_index=task_index,
+                    status=DelegationStatus.COMPLETED,
+                    summary=f"任务完成（模拟）: {task.goal[:100]}",
+                    exit_reason=ExitReason.COMPLETED,
+                    duration_seconds=duration,
+                )
 
             # 发射工具开始事件
             self._emit_event(EventType.TOOL_START, {
@@ -340,13 +350,41 @@ class DelegationManager:
                 "goal": task.goal,
             })
 
-            # 模拟结果
+            # 执行子 Agent
+            child_token = child_agent.get_interrupt_token()
+
+            # 运行子 Agent
+            response = child_agent.run(
+                message=task.goal,
+                max_iterations=self._config.isolation.max_iterations,
+                interrupt_token=child_token,
+            )
+
+            # 检查是否被中断
+            if interrupt_token and interrupt_token.check():
+                return TaskResult(
+                    task_index=task_index,
+                    status=DelegationStatus.INTERRUPTED,
+                    exit_reason=ExitReason.INTERRUPTED,
+                )
+
+            # 提取结果
+            duration = time.monotonic() - start_time
+            summary = response.content if response.content else "任务完成（无输出）"
+
+            # 计算 Token 使用
+            tokens = {"input": 0, "output": 0}
+            if response.usage:
+                tokens["input"] = response.usage.prompt_tokens
+                tokens["output"] = response.usage.completion_tokens
+
             result = TaskResult(
                 task_index=task_index,
                 status=DelegationStatus.COMPLETED,
-                summary=f"任务完成: {task.goal[:100]}",
+                summary=summary,
                 exit_reason=ExitReason.COMPLETED,
                 duration_seconds=duration,
+                tokens=tokens,
             )
 
             # 发射工具结束事件
@@ -370,6 +408,89 @@ class DelegationManager:
 
         finally:
             self._unregister_child(subagent_id)
+
+    def _create_child_agent(
+        self,
+        task: TaskSpec,
+        system_prompt: str,
+    ) -> Optional["Agent"]:
+        """创建子 Agent。
+
+        Args:
+            task: 任务规格
+            system_prompt: 系统提示
+
+        Returns:
+            子 Agent 实例，如果无法创建则返回 None
+        """
+        if self._parent_agent is None:
+            return None
+
+        try:
+            # 获取父 Agent 的 Provider
+            provider = getattr(self._parent_agent, "_provider", None)
+            if provider is None:
+                return None
+
+            # 获取父 Agent 的设置
+            settings = getattr(self._parent_agent, "_settings", None)
+
+            # 构建子 Agent 的工具集
+            child_tools = self._build_child_tools(task)
+
+            # 导入 Agent 类（延迟导入避免循环依赖）
+            from agentforge.agent import Agent
+
+            # 创建子 Agent
+            child_agent = Agent(
+                provider=provider,
+                settings=settings,
+                tools=child_tools,
+            )
+
+            # 设置委托深度
+            parent_depth = getattr(self._parent_agent, "_delegate_depth", 0)
+            child_agent._delegate_depth = parent_depth + 1
+
+            # 设置系统提示（如果 Provider 支持）
+            if hasattr(child_agent, "_message_manager"):
+                child_agent._message_manager.set_system_prompt(system_prompt)
+
+            return child_agent
+
+        except Exception as e:
+            logger.error(f"创建子 Agent 失败: {e}")
+            return None
+
+    def _build_child_tools(self, task: TaskSpec) -> List[Any]:
+        """构建子 Agent 的工具集。
+
+        Args:
+            task: 任务规格
+
+        Returns:
+            工具列表
+        """
+        # 获取父 Agent 的工具
+        parent_tools = {}
+        if self._parent_agent:
+            parent_tools = getattr(self._parent_agent, "_tools", {})
+
+        # 被阻止的工具
+        blocked_tools = self._config.isolation.blocked_tools
+
+        # 根据任务指定的工具集过滤
+        if task.toolsets:
+            # TODO: 实现工具集过滤
+            pass
+
+        # 过滤被阻止的工具
+        child_tools = []
+        for name, tool in parent_tools.items():
+            if name not in blocked_tools:
+                child_tools.append(tool)
+
+        return child_tools
 
     def _build_child_prompt(self, task: TaskSpec) -> str:
         """构建子 Agent 系统提示。

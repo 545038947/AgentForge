@@ -69,6 +69,71 @@ class MessageManager:
         self._compressor = compressor
         self._memory = memory
 
+        # 系统提示组件
+        self._system_prompt_parts: List[str] = []
+        self._memory_context: Optional[str] = None
+        self._skill_prompts: dict[str, str] = {}
+
+    def set_system_prompt(self, prompt: str) -> None:
+        """设置系统提示。
+
+        Args:
+            prompt: 系统提示文本
+        """
+        self._system_prompt_parts = [prompt] if prompt else []
+
+    def add_system_prompt_part(self, part: str) -> None:
+        """添加系统提示部分。
+
+        Args:
+            part: 提示部分
+        """
+        if part:
+            self._system_prompt_parts.append(part)
+
+    def add_memory_context(self, context: str) -> None:
+        """添加记忆上下文。
+
+        Args:
+            context: 记忆上下文文本
+        """
+        self._memory_context = context
+
+    def add_skill_prompt(self, skill_name: str, prompt: str) -> None:
+        """添加技能提示。
+
+        Args:
+            skill_name: 技能名称
+            prompt: 提示文本
+        """
+        self._skill_prompts[skill_name] = prompt
+
+    def remove_skill_prompt(self, skill_name: str) -> None:
+        """移除技能提示。
+
+        Args:
+            skill_name: 技能名称
+        """
+        self._skill_prompts.pop(skill_name, None)
+
+    def get_system_prompt(self) -> Optional[str]:
+        """获取完整的系统提示。
+
+        Returns:
+            系统提示文本
+        """
+        parts = list(self._system_prompt_parts)
+
+        # 添加记忆上下文
+        if self._memory_context:
+            parts.append(f"\n## 记忆上下文\n{self._memory_context}")
+
+        # 添加技能提示
+        for skill_name, prompt in self._skill_prompts.items():
+            parts.append(f"\n## 技能: {skill_name}\n{prompt}")
+
+        return "\n".join(parts) if parts else None
+
     def add_message(self, message: Message) -> None:
         """添加消息到历史。
 
