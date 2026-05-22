@@ -25,10 +25,14 @@ from agentforge.events import EventType
 from agentforge.interrupt import InterruptToken
 from agentforge.types import NormalizedResponse
 
+# 新增
+from agentforge.profiles.profile import AgentProfile
+
 if TYPE_CHECKING:
     from agentforge.agent import Agent
     from agentforge.config import Settings
     from agentforge.providers import Provider
+    from agentforge.profiles import ProfileRegistry, ProviderRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +67,8 @@ class DelegationManager:
         config: Optional[DelegationConfig] = None,
         parent_agent: Optional["Agent"] = None,
         event_dispatcher: Optional[Any] = None,
+        profile_registry: Optional["ProfileRegistry"] = None,
+        provider_registry: Optional["ProviderRegistry"] = None,
     ):
         """初始化委托管理器。
 
@@ -70,10 +76,14 @@ class DelegationManager:
             config: 委托配置
             parent_agent: 父 Agent
             event_dispatcher: 事件分发器
+            profile_registry: Profile 注册表
+            provider_registry: Provider 注册表
         """
         self._config = config or DelegationConfig()
         self._parent_agent = parent_agent
         self._event_dispatcher = event_dispatcher
+        self._profile_registry = profile_registry
+        self._provider_registry = provider_registry
 
         # 活跃子 Agent 注册表
         self._active_children: Dict[str, Any] = {}
@@ -549,6 +559,131 @@ class DelegationManager:
 """)
 
         return "\n".join(parts)
+
+    def _resolve_profile(
+        self,
+        profile_name: str,
+        task: TaskSpec,
+    ) -> Optional[AgentProfile]:
+        """解析并验证 Profile。
+
+        Args:
+            profile_name: Profile 名称
+            task: 任务规格
+
+        Returns:
+            解析后的 Profile，如果无效则返回 None
+        """
+        if self._profile_registry is None:
+            logger.debug("ProfileRegistry 未配置")
+            return None
+
+        profile = self._profile_registry.get(profile_name)
+        if profile is None:
+            logger.warning(f"Profile '{profile_name}' 不存在")
+            self._emit_event(EventType.PROFILE_INVALID, {
+                "profile": profile_name,
+                "errors": ["Profile 不存在"],
+            })
+            return None
+
+        # 验证 Profile
+        errors, warnings = profile.validate(self._provider_registry)
+        if errors:
+            logger.error(f"Profile '{profile_name}' 验证失败: {errors}")
+            self._emit_event(EventType.PROFILE_INVALID, {
+                "profile": profile_name,
+                "errors": errors,
+                "warnings": warnings,
+            })
+            return None
+
+        if warnings:
+            logger.warning(f"Profile '{profile_name}' 警告: {warnings}")
+
+        # 发射加载事件
+        self._emit_event(EventType.PROFILE_LOADED, {
+            "profile": profile_name,
+            "provider": profile.provider,
+            "model": profile.model,
+        })
+
+        return profile
+
+    def _resolve_child_config(
+        self,
+        task: TaskSpec,
+        profile: Optional[AgentProfile],
+        system_prompt: str,
+    ) -> tuple:
+        """解析子 Agent 的最终配置。
+
+        优先级：task 覆盖 > Profile 配置 > 父 Agent 回退
+
+        Args:
+            task: 任务规格
+            profile: Profile 对象（可选）
+            system_prompt: 基础系统提示
+
+        Returns:
+            (provider_name, model, settings_dict)
+        """
+        # 默认从父 Agent 获取
+        parent_provider = getattr(
+            getattr(self._parent_agent, "_provider", None),
+            "name",
+            None
+        )
+        parent_model = getattr(self._parent_agent, "_settings", None)
+        parent_model = getattr(parent_model, "model", None) if parent_model else None
+        parent_temp = getattr(self._parent_agent, "_settings", None)
+        parent_temp = getattr(parent_temp, "temperature", 1.0) if parent_temp else 1.0
+        parent_tokens = getattr(self._parent_agent, "_settings", None)
+        parent_tokens = getattr(parent_tokens, "max_tokens", 4096) if parent_tokens else 4096
+
+        # Provider: task > profile > 父 Agent
+        provider_name = None
+        if profile and profile.provider:
+            if self._provider_registry and self._provider_registry.is_available(profile.provider):
+                provider_name = profile.provider
+        if provider_name is None:
+            provider_name = parent_provider
+
+        # Model: task > profile > 父 Agent
+        model = task.model
+        if model is None and profile:
+            model = profile.model
+        if model is None:
+            model = parent_model
+
+        # Temperature: task > profile > 父 Agent
+        temperature = task.temperature
+        if temperature is None and profile:
+            temperature = profile.temperature
+        if temperature is None:
+            temperature = parent_temp
+
+        # Max tokens: task > profile > 父 Agent
+        max_tokens = task.max_tokens
+        if max_tokens is None and profile:
+            max_tokens = profile.max_tokens
+        if max_tokens is None:
+            max_tokens = parent_tokens
+
+        # System prompt: base + profile + task append
+        final_prompt = system_prompt
+        if profile and profile.system_prompt:
+            final_prompt = f"{system_prompt}\n\n{profile.system_prompt}"
+        if task.system_prompt:
+            final_prompt = f"{final_prompt}\n\n{task.system_prompt}"
+
+        settings_dict = {
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "system_prompt": final_prompt,
+        }
+
+        return provider_name, model, settings_dict
 
     def _get_current_depth(self) -> int:
         """获取当前委托深度。
