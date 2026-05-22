@@ -44,6 +44,12 @@ class ErrorReason(enum.Enum):
     # 请求格式错误
     format_error = "format_error"  # 400 错误请求
 
+    # Provider 特定错误
+    thinking_signature = "thinking_signature"  # Anthropic thinking block 签名无效
+    long_context_tier = "long_context_tier"  # Anthropic 长上下文层级限制
+    oauth_long_context_beta_forbidden = "oauth_long_context_beta_forbidden"  # Anthropic OAuth 订阅拒绝长上下文 beta
+    llama_cpp_grammar_pattern = "llama_cpp_grammar_pattern"  # llama.cpp JSON schema 语法错误
+
     # 工具错误
     tool_execution = "tool_execution"  # 工具执行错误
     tool_timeout = "tool_timeout"  # 工具超时
@@ -732,7 +738,7 @@ def classify_api_error(
         and "thinking" in error_msg
     ):
         return _result(
-            ErrorReason.format_error,
+            ErrorReason.thinking_signature,
             retryable=True,
             should_compress=False,
         )
@@ -744,7 +750,7 @@ def classify_api_error(
         and "long context" in error_msg
     ):
         return _result(
-            ErrorReason.rate_limit,
+            ErrorReason.long_context_tier,
             retryable=True,
             should_compress=True,
         )
@@ -756,7 +762,7 @@ def classify_api_error(
         and "not yet available" in error_msg
     ):
         return _result(
-            ErrorReason.format_error,
+            ErrorReason.oauth_long_context_beta_forbidden,
             retryable=True,
             should_compress=False,
         )
@@ -771,7 +777,7 @@ def classify_api_error(
         )
     ):
         return _result(
-            ErrorReason.format_error,
+            ErrorReason.llama_cpp_grammar_pattern,
             retryable=True,
             should_compress=False,
         )
