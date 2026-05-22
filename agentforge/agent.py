@@ -32,6 +32,7 @@ from agentforge.core import (
     ExecutionEngine,
     ExecutionConfig,
     ExecutionResult,
+    StreamAccumulator,
 )
 from agentforge.tools.guardrails import ToolCallGuardrailController
 
@@ -772,6 +773,7 @@ class Agent:
         max_iterations: int = 10,
         interrupt_token: Optional[InterruptToken] = None,
         include_reasoning: bool = False,
+        suppress_tool_text: bool = True,
     ) -> Iterator[StreamDelta]:
         """流式运行 Agent，返回 Token 增量。
 
@@ -783,6 +785,8 @@ class Agent:
             max_iterations: 最大迭代次数
             interrupt_token: 中断令牌（可选）
             include_reasoning: 是否包含推理增量
+            suppress_tool_text: 当有工具调用时是否抑制文本流式
+                               （避免 "我将使用工具..." 文本与工具调用一起显示）
 
         Yields:
             StreamDelta 增量对象，包含 content、reasoning 等
@@ -833,56 +837,67 @@ class Agent:
             # 流式调用 Provider
             self._event_dispatcher.dispatch(EventType.PROVIDER_REQUEST, {})
 
-            accumulated_content = ""
-            accumulated_reasoning = ""
-            accumulated_tool_calls: List[Any] = []
-            final_usage = None
-            final_finish_reason = "stop"
+            # 使用 StreamAccumulator 管理流式累积
+            accumulator = StreamAccumulator()
 
             try:
                 for chunk in self._provider.stream(
                     messages=context,
                     tools=list(self._tools.values()) if self._tools else None,
                 ):
-                    # 提取增量内容
-                    delta_content = ""
+                    # 处理文本内容增量
+                    delta_content = accumulator.add_content(chunk.content)
+
+                    # 处理推理内容增量
                     delta_reasoning = ""
-
-                    if chunk.content:
-                        # 计算增量（本次内容 - 已累积内容）
-                        delta_content = chunk.content[len(accumulated_content):]
-                        accumulated_content = chunk.content
-
-                    if include_reasoning and chunk.reasoning:
-                        delta_reasoning = chunk.reasoning[len(accumulated_reasoning):]
-                        accumulated_reasoning = chunk.reasoning
+                    if include_reasoning:
+                        delta_reasoning = accumulator.add_reasoning(chunk.reasoning)
 
                     # 处理工具调用增量
+                    # 注意：某些 Provider（如 OpenAI SDK）在流式响应中返回完整的 tool_calls
+                    # 而不是增量式的。我们需要检查是否需要处理增量式工具调用。
                     if chunk.tool_calls:
-                        # 对于流式工具调用，通常是累积式的
-                        accumulated_tool_calls = chunk.tool_calls
+                        # 对于非增量式工具调用，直接使用
+                        accumulator.tool_calls.calls = {
+                            i: {
+                                "id": tc.id or "",
+                                "type": "function",
+                                "function": {"name": tc.name, "arguments": tc.arguments},
+                                "extra_content": tc.provider_data.get("extra_content") if tc.provider_data else None,
+                            }
+                            for i, tc in enumerate(chunk.tool_calls)
+                        }
+                        accumulator.tool_calls.notified_names = set(range(len(chunk.tool_calls)))
 
-                    # 提取使用统计
-                    if chunk.usage:
-                        final_usage = chunk.usage
+                    # 更新使用统计和结束原因
+                    accumulator.update_usage(chunk.usage)
+                    accumulator.update_finish_reason(chunk.finish_reason)
+                    accumulator.update_model(chunk.model)
 
-                    if chunk.finish_reason:
-                        final_finish_reason = chunk.finish_reason
+                    # 决定是否发射文本增量
+                    # 当有工具调用且 suppress_tool_text 为 True 时，抑制文本流式
+                    should_emit_text = delta_content and not (
+                        suppress_tool_text and accumulator.should_suppress_text_streaming()
+                    )
 
-                    # 发射 STREAM_DELTA 事件
-                    if delta_content or delta_reasoning:
+                    # 发射推理增量事件
+                    if delta_reasoning:
+                        self._event_dispatcher.dispatch(
+                            EventType.STREAM_REASONING_DELTA,
+                            {"reasoning": delta_reasoning},
+                        )
+
+                    # 发射文本增量事件
+                    if should_emit_text:
                         self._event_dispatcher.dispatch(
                             EventType.STREAM_DELTA,
-                            {
-                                "content": delta_content,
-                                "reasoning": delta_reasoning,
-                            },
+                            {"content": delta_content},
                         )
 
                     # 只在有增量时才 yield
-                    if delta_content or delta_reasoning:
+                    if should_emit_text or delta_reasoning:
                         yield StreamDelta(
-                            content=delta_content,
+                            content=delta_content if should_emit_text else "",
                             reasoning=delta_reasoning,
                         )
 
@@ -897,28 +912,24 @@ class Agent:
             self._event_dispatcher.dispatch(EventType.STREAM_END, {})
 
             # 检查是否有工具调用
-            if accumulated_tool_calls:
+            if accumulator.has_tool_calls():
                 # 构建完整响应
-                final_response = NormalizedResponse(
-                    content=accumulated_content,
-                    tool_calls=accumulated_tool_calls,
-                    usage=final_usage,
-                    finish_reason="tool_calls",
-                )
+                final_response = accumulator.build_response()
 
                 # 添加 assistant 消息
                 self._message_manager.add_assistant_message(final_response)
 
                 # 发射工具调用生成事件
+                tool_calls = final_response.tool_calls
                 self._event_dispatcher.dispatch(
                     EventType.TOOL_GENERATED,
-                    {"tool_calls": accumulated_tool_calls},
+                    {"tool_calls": tool_calls},
                 )
 
                 # 执行工具
                 self._event_dispatcher.dispatch(
                     EventType.TOOL_START,
-                    {"tool_calls": accumulated_tool_calls},
+                    {"tool_calls": tool_calls},
                 )
 
                 # 发射工具执行提示
@@ -956,21 +967,15 @@ class Agent:
                 continue
 
             # 无工具调用，返回最终增量
-            final_response = NormalizedResponse(
-                content=accumulated_content,
-                reasoning=accumulated_reasoning,
-                tool_calls=None,
-                usage=final_usage,
-                finish_reason=final_finish_reason,
-            )
+            final_response = accumulator.build_response()
 
             self._message_manager.add_assistant_message(final_response)
 
             # 发射最终增量
             yield StreamDelta(
                 content="",  # 内容已在前面的增量中发送
-                finish_reason=final_finish_reason,
-                usage=final_usage,
+                finish_reason=accumulator.finish_reason or "stop",
+                usage=accumulator.usage,
             )
 
             self._event_dispatcher.dispatch(EventType.AGENT_END, {})

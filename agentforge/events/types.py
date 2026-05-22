@@ -32,12 +32,15 @@ class EventType(enum.Enum):
     TOOL_PROGRESS = "tool.progress"         # 工具执行进度
     TOOL_APPROVAL_REQUIRED = "tool.approval_required"
     TOOL_GENERATED = "tool.generated"       # 工具调用生成
+    TOOL_GENERATING = "tool.generating"     # 工具调用正在生成（流式）
+    TOOL_DELTA = "tool.delta"               # 工具调用增量（流式）
 
     # Provider 调用
     PROVIDER_REQUEST = "provider.request"
     PROVIDER_RESPONSE = "provider.response"
     PROVIDER_ERROR = "provider.error"
     STREAM_DELTA = "stream.delta"           # 流式 Token 增量
+    STREAM_REASONING_DELTA = "stream.reasoning_delta"  # 流式推理增量
     STREAM_CHUNK = "stream.chunk"           # 流式响应块
     STREAM_END = "stream.end"               # 流式结束
 

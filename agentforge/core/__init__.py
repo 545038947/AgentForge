@@ -32,6 +32,10 @@ from agentforge.core.model_metadata import (
     ModelMetadataProvider,
     DefaultModelMetadataProvider,
 )
+from agentforge.core.stream_accumulator import (
+    ToolCallAccumulator,
+    StreamAccumulator,
+)
 
 __all__ = [
     # 迭代预算
@@ -62,4 +66,7 @@ __all__ = [
     "ModelCapabilities",
     "ModelMetadataProvider",
     "DefaultModelMetadataProvider",
+    # 流式累积器
+    "ToolCallAccumulator",
+    "StreamAccumulator",
 ]
