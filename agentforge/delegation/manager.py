@@ -652,6 +652,132 @@ class DelegationManager:
             except Exception as e:
                 logger.debug(f"发射事件失败: {e}")
 
+    # === 异步方法 ===
+
+    async def delegate_async(
+        self,
+        goal: str,
+        context: Optional[str] = None,
+        interrupt_token: Optional[InterruptToken] = None,
+    ) -> DelegationResult:
+        """异步执行单任务委托。
+
+        Args:
+            goal: 任务目标
+            context: 任务上下文（可选）
+            interrupt_token: 中断令牌（可选）
+
+        Returns:
+            委托结果
+        """
+        import asyncio
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.delegate(goal, context, interrupt_token),
+        )
+
+    async def delegate_batch_async(
+        self,
+        tasks: List[TaskSpec],
+        strategy: DelegationStrategy = DelegationStrategy.SEQUENTIAL,
+        interrupt_token: Optional[InterruptToken] = None,
+    ) -> DelegationResult:
+        """异步执行批量委托。
+
+        根据策略选择执行方式：
+        - SEQUENTIAL: 顺序执行
+        - PARALLEL: 使用 asyncio.gather 并行执行
+
+        Args:
+            tasks: 任务规格列表
+            strategy: 执行策略
+            interrupt_token: 中断令牌（可选）
+
+        Returns:
+            委托结果
+        """
+        import asyncio
+
+        if strategy == DelegationStrategy.PARALLEL:
+            return await self._delegate_parallel_async(tasks, interrupt_token)
+        else:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None,
+                lambda: self.delegate_batch(tasks, strategy, interrupt_token),
+            )
+
+    async def _delegate_parallel_async(
+        self,
+        tasks: List[TaskSpec],
+        interrupt_token: Optional[InterruptToken] = None,
+    ) -> DelegationResult:
+        """异步并行执行多个任务。
+
+        使用 asyncio.gather 并行执行所有任务。
+
+        Args:
+            tasks: 任务规格列表
+            interrupt_token: 中断令牌（可选）
+
+        Returns:
+            委托结果
+        """
+        import asyncio
+
+        start_time = time.monotonic()
+
+        # 发射委托开始事件
+        self._emit_event(EventType.DELEGATION_START, {
+            "task_count": len(tasks),
+            "strategy": "parallel_async",
+        })
+
+        # 创建并行任务
+        async def run_single_task(index: int, task: TaskSpec) -> TaskResult:
+            return await asyncio.to_thread(
+                self._execute_single_task,
+                index,
+                task,
+                interrupt_token,
+            )
+
+        # 并行执行
+        coros = [run_single_task(i, task) for i, task in enumerate(tasks)]
+        task_results = await asyncio.gather(*coros, return_exceptions=True)
+
+        # 处理结果
+        results: List[TaskResult] = []
+        for i, result in enumerate(task_results):
+            if isinstance(result, Exception):
+                results.append(TaskResult(
+                    task_index=i,
+                    status=DelegationStatus.FAILED,
+                    error=str(result),
+                    exit_reason=ExitReason.ERROR,
+                ))
+            else:
+                results.append(result)
+
+        # 构建最终结果
+        duration = time.monotonic() - start_time
+        final_result = DelegationResult(
+            status=DelegationStatus.COMPLETED,
+            task_results=results,
+            strategy_used=DelegationStrategy.PARALLEL,
+            duration_seconds=duration,
+        )
+
+        # 发射委托结束事件
+        self._emit_event(EventType.DELEGATION_END, {
+            "status": final_result.status.value,
+            "duration": duration,
+        })
+
+        return final_result
+
     def clear(self) -> None:
         """清空所有状态。"""
         with self._active_children_lock:

@@ -68,10 +68,16 @@ class IterationBudget:
         with self._lock:
             return max(0, self.max_total - self._used)
 
-    def reset(self) -> None:
-        """重置计数器。"""
+    def reset(self, max_total: Optional[int] = None) -> None:
+        """重置计数器。
+
+        Args:
+            max_total: 新的最大迭代次数（可选）
+        """
         with self._lock:
             self._used = 0
+            if max_total is not None:
+                self.max_total = max_total
 
     def __repr__(self) -> str:
         return f"IterationBudget(used={self.used}/{self.max_total})"

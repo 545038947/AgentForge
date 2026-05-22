@@ -6,11 +6,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncIterator,
     Callable,
     Dict,
     Iterator,
@@ -25,6 +27,7 @@ from agentforge.interrupt import InterruptHandler, InterruptToken
 from agentforge.managers import MessageManager, ToolOrchestrator
 from agentforge.context import ContextCompressor
 from agentforge.tools import Tool, FunctionTool, ApprovalCallback
+from agentforge.tools.guardrails import ToolCallGuardrailController
 from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta
 from agentforge.core import (
     IterationBudget,
@@ -33,8 +36,8 @@ from agentforge.core import (
     ExecutionConfig,
     ExecutionResult,
     StreamAccumulator,
+    AsyncIteratorWrapper,
 )
-from agentforge.tools.guardrails import ToolCallGuardrailController
 
 if TYPE_CHECKING:
     from agentforge.providers import Provider
@@ -1059,6 +1062,135 @@ class Agent:
             "api_call_count": self._api_call_count,
             "rate_limit_state": self._rate_limit_state,
         }
+
+    # === 异步 API ===
+
+    async def run_async(
+        self,
+        message: Union[str, Message],
+        max_iterations: int = 10,
+        interrupt_token: Optional[InterruptToken] = None,
+    ) -> NormalizedResponse:
+        """异步运行 Agent。
+
+        使用 asyncio.to_thread 包装同步调用，适用于异步上下文。
+
+        Args:
+            message: 用户消息
+            max_iterations: 最大迭代次数
+            interrupt_token: 中断令牌（可选）
+
+        Returns:
+            完整响应
+
+        使用示例：
+            response = await agent.run_async("你好")
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.run(message, max_iterations, interrupt_token),
+        )
+
+    async def stream_async(
+        self,
+        message: Union[str, Message],
+        max_iterations: int = 10,
+        interrupt_token: Optional[InterruptToken] = None,
+    ) -> AsyncIterator[NormalizedResponse]:
+        """异步流式运行 Agent。
+
+        Args:
+            message: 用户消息
+            max_iterations: 最大迭代次数
+            interrupt_token: 中断令牌（可选）
+
+        Yields:
+            NormalizedResponse 响应块
+
+        使用示例：
+            async for chunk in agent.stream_async("你好"):
+                print(chunk.content)
+        """
+        loop = asyncio.get_running_loop()
+        sync_iterator = await loop.run_in_executor(
+            None,
+            lambda: self.stream(message, max_iterations, interrupt_token),
+        )
+
+        while True:
+            chunk = await loop.run_in_executor(None, lambda: next(sync_iterator, None))
+            if chunk is None:
+                break
+            yield chunk
+
+    async def stream_deltas_async(
+        self,
+        message: Union[str, Message],
+        max_iterations: int = 10,
+        interrupt_token: Optional[InterruptToken] = None,
+        include_reasoning: bool = False,
+        suppress_tool_text: bool = True,
+    ) -> AsyncIterator[StreamDelta]:
+        """异步流式运行 Agent，返回 Token 增量。
+
+        Args:
+            message: 用户消息
+            max_iterations: 最大迭代次数
+            interrupt_token: 中断令牌（可选）
+            include_reasoning: 是否包含推理增量
+            suppress_tool_text: 当有工具调用时是否抑制文本流式
+
+        Yields:
+            StreamDelta 增量对象
+
+        使用示例：
+            async for delta in agent.stream_deltas_async("你好"):
+                if delta.has_content:
+                    print(delta.content, end="", flush=True)
+        """
+        loop = asyncio.get_running_loop()
+        sync_iterator = await loop.run_in_executor(
+            None,
+            lambda: self.stream_deltas(
+                message,
+                max_iterations,
+                interrupt_token,
+                include_reasoning,
+                suppress_tool_text,
+            ),
+        )
+
+        while True:
+            delta = await loop.run_in_executor(None, lambda: next(sync_iterator, None))
+            if delta is None:
+                break
+            yield delta
+
+    async def complete_async(
+        self,
+        messages: List[Message],
+        tools: Optional[List[Tool]] = None,
+    ) -> NormalizedResponse:
+        """异步完成单次 API 调用（不执行工具循环）。
+
+        适用于需要直接调用 Provider 的场景。
+
+        Args:
+            messages: 消息列表
+            tools: 工具列表（可选）
+
+        Returns:
+            Provider 响应
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self._provider.complete(
+                messages=messages,
+                tools=tools or list(self._tools.values()),
+            ),
+        )
 
     # === Provider 自动选择 ===
 

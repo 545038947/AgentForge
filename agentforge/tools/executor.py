@@ -388,6 +388,59 @@ class ToolExecutor:
         with self._lock:
             self._executions.clear()
 
+    # === 异步方法 ===
+
+    async def execute_async(
+        self,
+        tool: Tool,
+        tool_call_id: str,
+        **kwargs,
+    ) -> ToolResult:
+        """异步执行单个工具。
+
+        Args:
+            tool: 工具实例
+            tool_call_id: 工具调用 ID
+            **kwargs: 工具参数
+
+        Returns:
+            工具执行结果
+        """
+        import asyncio
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.execute(tool, tool_call_id, **kwargs),
+        )
+
+    async def execute_batch_async(
+        self,
+        calls: List[tuple[Tool, str, Dict[str, Any]]],
+    ) -> List[ToolResult]:
+        """异步并发执行多个工具。
+
+        使用 asyncio.gather 并行执行，而不是 ThreadPoolExecutor。
+
+        Args:
+            calls: 工具调用列表，每项为 (tool, tool_call_id, args)
+
+        Returns:
+            工具执行结果列表（按输入顺序）
+        """
+        import asyncio
+
+        if not calls:
+            return []
+
+        # 创建异步任务列表
+        tasks = [
+            self.execute_async(tool, tool_call_id, **args)
+            for tool, tool_call_id, args in calls
+        ]
+
+        # 并行执行
+        return await asyncio.gather(*tasks, return_exceptions=False)
+
     def __enter__(self) -> "ToolExecutor":
         """上下文管理器入口。"""
         self.start()

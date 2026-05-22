@@ -36,6 +36,16 @@ from agentforge.core.stream_accumulator import (
     ToolCallAccumulator,
     StreamAccumulator,
 )
+from agentforge.core.async_utils import (
+    safe_schedule_threadsafe,
+    to_thread,
+    gather_with_concurrency,
+    run_with_timeout,
+    is_async_context,
+    get_event_loop,
+    AsyncIteratorWrapper,
+    async_wrap,
+)
 
 __all__ = [
     # 迭代预算
@@ -69,4 +79,13 @@ __all__ = [
     # 流式累积器
     "ToolCallAccumulator",
     "StreamAccumulator",
+    # 异步工具
+    "safe_schedule_threadsafe",
+    "to_thread",
+    "gather_with_concurrency",
+    "run_with_timeout",
+    "is_async_context",
+    "get_event_loop",
+    "AsyncIteratorWrapper",
+    "async_wrap",
 ]
