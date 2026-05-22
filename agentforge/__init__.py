@@ -132,6 +132,9 @@ from agentforge.session import (
     InMemorySessionProvider,
 )
 
+# 触发内置 Provider 自动注册
+import agentforge.providers.builtins
+
 __all__ = [
     # 版本
     "__version__",
