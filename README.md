@@ -138,6 +138,52 @@ agent2.prefetch()
 agent2.run("我叫什么名字？")  # Agent 会回答 "张三"
 ```
 
+### 自动记忆提取
+
+AgentForge 支持从对话中自动提取值得记忆的信息：
+
+```python
+from agentforge import Agent
+
+agent = Agent(model="gpt-4")
+agent.enable_memory_store("./memories")
+
+# 启用自动提取（基于规则）
+agent._memory_manager.enable_auto_extraction()
+
+agent.prefetch()
+agent.run("我叫张三，我喜欢使用 Python")
+
+# 自动提取并存储了：
+# - "用户名叫张三"
+# - "用户偏好：使用 Python"
+```
+
+### 自定义记忆存储
+
+开发者可以继承 `MemoryStoreBase` 实现自定义存储：
+
+```python
+from agentforge.memory import MemoryStoreBase
+
+class MultiUserMemoryStore(MemoryStoreBase):
+    """多用户记忆存储。"""
+
+    def __init__(self, base_path: str, user_id: str):
+        # 用户隔离的存储路径
+        ...
+
+    # 实现抽象方法...
+
+# 使用自定义存储
+agent = Agent(model="gpt-4")
+agent._memory_manager.enable_memory_store(
+    store=MultiUserMemoryStore("./memories", user_id="user-123")
+)
+```
+
+详见 [记忆系统扩展指南](docs/memory-extension-guide.md)。
+
 ### 记忆层次结构
 
 ```
@@ -151,6 +197,7 @@ agent2.run("我叫什么名字？")  # Agent 会回答 "张三"
 │  │  - USER.md: 用户偏好（有界 1375 chars）                  │    │
 │  │  - 冻结快照模式（保持 LLM 前缀缓存）                     │    │
 │  │  - 安全扫描（检测注入攻击）                              │    │
+│  │  - 元数据支持（来源、重要性、过期时间）                  │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                           │                                       │
 │  Layer 2: Working Memory（ContextCompressor）                    │
@@ -237,7 +284,10 @@ agentforge/
 ├── memory/               # 记忆系统
 │   ├── base.py           # 记忆提供者基类
 │   ├── manager.py        # 记忆管理器（生命周期钩子）
+│   ├── memory_store_base.py  # 长期记忆抽象基类
 │   ├── memory_store.py   # 长期记忆存储（冻结快照）
+│   ├── metadata.py       # 记忆元数据（来源、重要性）
+│   ├── extractor.py      # 自动记忆提取器
 │   └── builtins/         # 内置记忆提供者
 ├── skills/               # 技能系统
 │   ├── base.py           # 技能基类
