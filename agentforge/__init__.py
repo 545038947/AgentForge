@@ -133,6 +133,14 @@ from agentforge.session import (
     InMemorySessionProvider,
 )
 
+# Profile 系统
+from agentforge.profiles import (
+    AgentProfile,
+    ProviderCredentials,
+    ProviderRegistry,
+    ProfileRegistry,
+)
+
 # 触发内置 Provider 自动注册
 import agentforge.providers.builtins
 
@@ -238,4 +246,9 @@ __all__ = [
     "SessionInfo",
     "MessageRecord",
     "InMemorySessionProvider",
+    # Profile 系统
+    "AgentProfile",
+    "ProviderCredentials",
+    "ProviderRegistry",
+    "ProfileRegistry",
 ]
