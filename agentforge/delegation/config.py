@@ -79,6 +79,10 @@ class TaskSpec:
         toolsets: 工具集列表（可选）
         role: 角色（leaf 或 orchestrator）
         model: 模型名称（可选）
+        agent_profile: Profile 名称（可选）
+        temperature: 运行时温度覆盖（可选）
+        max_tokens: 运行时 max_tokens 覆盖（可选）
+        system_prompt: 追加到 Profile 的 system_prompt（可选）
     """
 
     goal: str
@@ -87,12 +91,30 @@ class TaskSpec:
     role: str = "leaf"
     model: Optional[str] = None
 
+    # Profile 相关字段
+    agent_profile: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    system_prompt: Optional[str] = None
+
     def to_dict(self) -> dict:
         """转换为字典格式。"""
-        return {
+        result = {
             "goal": self.goal,
             "context": self.context,
             "toolsets": self.toolsets,
             "role": self.role,
             "model": self.model,
         }
+
+        # 添加 Profile 相关字段
+        if self.agent_profile:
+            result["agent_profile"] = self.agent_profile
+        if self.temperature is not None:
+            result["temperature"] = self.temperature
+        if self.max_tokens is not None:
+            result["max_tokens"] = self.max_tokens
+        if self.system_prompt:
+            result["system_prompt"] = self.system_prompt
+
+        return result

@@ -110,6 +110,62 @@ class TestTaskSpec:
         assert d["role"] == "orchestrator"
 
 
+class TestTaskSpecProfile:
+    """TaskSpec Profile 相关测试。"""
+
+    def test_task_spec_with_profile(self):
+        """测试带 Profile 的 TaskSpec。"""
+        spec = TaskSpec(
+            goal="审查代码",
+            agent_profile="security-reviewer",
+        )
+
+        assert spec.agent_profile == "security-reviewer"
+        assert spec.to_dict()["agent_profile"] == "security-reviewer"
+
+    def test_task_spec_with_overrides(self):
+        """测试带覆盖参数的 TaskSpec。"""
+        spec = TaskSpec(
+            goal="测试",
+            agent_profile="test-profile",
+            temperature=0.5,
+            max_tokens=2048,
+            system_prompt="额外提示",
+        )
+
+        assert spec.temperature == 0.5
+        assert spec.max_tokens == 2048
+        assert spec.system_prompt == "额外提示"
+
+    def test_task_spec_to_dict_with_new_fields(self):
+        """测试新字段序列化。"""
+        spec = TaskSpec(
+            goal="测试",
+            agent_profile="test",
+            temperature=0.7,
+            max_tokens=1000,
+            system_prompt="提示",
+        )
+
+        result = spec.to_dict()
+
+        assert result["agent_profile"] == "test"
+        assert result["temperature"] == 0.7
+        assert result["max_tokens"] == 1000
+        assert result["system_prompt"] == "提示"
+
+    def test_task_spec_to_dict_without_profile_fields(self):
+        """测试无 Profile 字段时的序列化。"""
+        spec = TaskSpec(goal="测试")
+
+        result = spec.to_dict()
+
+        assert "agent_profile" not in result
+        assert "temperature" not in result
+        assert "max_tokens" not in result
+        assert "system_prompt" not in result
+
+
 # ── 结果测试 ──────────────────────────────────────────────
 
 class TestDelegationStatus:
