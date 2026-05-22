@@ -1,6 +1,6 @@
-"""Anthropic Provider 实现。
+"""通义千问 Provider 实现。
 
-支持 Anthropic messages API。
+支持通义千问 API（兼容 OpenAI 格式）。
 """
 
 from __future__ import annotations
@@ -9,48 +9,54 @@ import logging
 from typing import Any, Dict, Iterator, List, Optional
 
 from agentforge.providers.base import Provider, ProviderCapabilities
-from agentforge.providers.client_factory import create_anthropic_client
-from agentforge.providers.transports import AnthropicTransport
+from agentforge.providers.client_factory import create_qwen_client
+from agentforge.providers.transports import ChatCompletionsTransport
 from agentforge.types import NormalizedResponse, Usage
 from agentforge.types.errors import ProviderError, ProviderRateLimitError
 
 logger = logging.getLogger(__name__)
 
 
-class AnthropicProvider(Provider):
-    """Anthropic Provider。
+class QwenProvider(Provider):
+    """通义千问 Provider。
 
     支持：
-    - messages API
+    - OpenAI 兼容 API
     - 流式响应
     - 工具调用
-    - 视觉能力
-    - Prompt Caching
-    - Extended Thinking
+    - 长上下文
 
     使用示例：
-        provider = AnthropicProvider(
-            api_key="sk-ant-...",
-            model="claude-3-opus",
+        provider = QwenProvider(
+            api_key="sk-...",
+            model="qwen-turbo",
         )
 
         response = provider.complete(messages, tools=tools)
     """
 
-    name = "anthropic"
+    name = "qwen"
+
+    # 通义千问模型列表
+    MODELS = {
+        "qwen-turbo": {"context_length": 8192},
+        "qwen-plus": {"context_length": 32768},
+        "qwen-max": {"context_length": 8192},
+        "qwen-max-longcontext": {"context_length": 30720},
+    }
 
     def __init__(
         self,
         api_key: str,
         base_url: Optional[str] = None,
-        model: str = "claude-3-opus-20240229",
+        model: str = "qwen-turbo",
         timeout: float = 300.0,
         **kwargs,
     ):
-        """初始化 Anthropic Provider。
+        """初始化通义千问 Provider。
 
         Args:
-            api_key: API 密钥
+            api_key: API 密钥（DASHSCOPE_API_KEY）
             base_url: API 基础 URL（可选）
             model: 模型名称
             timeout: 超时时间（秒）
@@ -68,28 +74,17 @@ class AnthropicProvider(Provider):
             supports_tools=True,
             supports_streaming=True,
             supports_vision=True,
-            supports_caching=True,
-            supports_reasoning=True,  # Anthropic 支持 extended thinking
+            supports_caching=False,
+            supports_reasoning=False,
         )
 
-    def supports(self, capability: str) -> bool:
-        """检查是否支持特定能力。
-
-        Args:
-            capability: 能力名称
-
-        Returns:
-            是否支持
-        """
-        return self.capabilities.supports(capability)
-
-    def _default_transport(self) -> AnthropicTransport:
-        """默认 Transport。"""
-        return AnthropicTransport()
+    def _default_transport(self) -> ChatCompletionsTransport:
+        """默认 Transport（使用 OpenAI 兼容格式）。"""
+        return ChatCompletionsTransport()
 
     def _create_client(self) -> Any:
         """创建 API 客户端。"""
-        return create_anthropic_client(
+        return create_qwen_client(
             api_key=self._api_key,
             base_url=self._base_url,
             timeout=self._timeout,
@@ -112,53 +107,46 @@ class AnthropicProvider(Provider):
             原生响应块
         """
         if self._client is None:
-            # SDK 未安装或 API 密钥未配置，返回模拟响应
-            logger.warning("Anthropic SDK 未安装或 API 密钥未配置，使用模拟响应")
+            logger.warning("通义千问 SDK 未安装或 API 密钥未配置，使用模拟响应")
             yield {
                 "content": "这是一个模拟响应（SDK 未安装或密钥未配置）。",
                 "model": self._model,
-                "finish_reason": "end_turn",
+                "finish_reason": "stop",
             }
             return
 
         try:
-            # 提取 system prompt
-            system = kwargs.pop("system", None)
-
             # 构建请求参数
             request_params = {
                 "model": kwargs.get("model", self._model),
                 "messages": messages,
-                "max_tokens": kwargs.get("max_tokens", 16384),
+                "stream": True,
             }
-
-            if system:
-                request_params["system"] = system
 
             if tools:
                 request_params["tools"] = tools
 
             # 添加其他参数
-            for key in ["temperature", "top_p", "top_k"]:
+            for key in ["max_tokens", "temperature", "top_p", "frequency_penalty", "presence_penalty"]:
                 if key in kwargs:
                     request_params[key] = kwargs[key]
 
             # 执行流式调用
-            with self._client.messages.stream(**request_params) as stream:
-                for event in stream:
-                    yield event
+            stream = self._client.chat.completions.create(**request_params)
+
+            for chunk in stream:
+                yield chunk
 
         except Exception as e:
-            # 检查是否是速率限制错误
             error_str = str(e).lower()
             if "rate" in error_str or "limit" in error_str or "429" in error_str:
                 raise ProviderRateLimitError(
-                    f"Anthropic 速率限制: {e}",
+                    f"通义千问速率限制: {e}",
                     provider=self.name,
                 ) from e
             else:
                 raise ProviderError(
-                    f"Anthropic API 调用失败: {e}",
+                    f"通义千问 API 调用失败: {e}",
                     provider=self.name,
                 ) from e
 
@@ -178,33 +166,20 @@ class AnthropicProvider(Provider):
         Yields:
             响应块
         """
-        # 使用 Transport 转换消息
-        system, converted_messages = self.transport.convert_messages(messages, **kwargs)
+        # 转换消息
+        converted_messages = self.transport.convert_messages(messages)
 
-        # 转换工具格式
+        # 转换工具
         converted_tools = None
-        if tools:
+        if tools and self.capabilities.supports_tools:
             converted_tools = self.transport.convert_tools(tools)
-
-        # 构建请求参数
-        request_kwargs = self.transport.build_kwargs(
-            model=self._model,
-            messages=messages,
-            tools=tools,
-            max_tokens=kwargs.get("max_tokens", 16384),
-            stream=True,
-            **kwargs,
-        )
-
-        # 添加 system prompt
-        if system:
-            request_kwargs["system"] = system
 
         # 执行流式调用
         for raw_response in self._do_stream(
             messages=converted_messages,
             tools=converted_tools,
-            **request_kwargs,
+            model=kwargs.get("model", self._model),
+            **kwargs,
         ):
             yield self.transport.normalize_response(raw_response)
 

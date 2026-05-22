@@ -1,6 +1,6 @@
-"""Anthropic Provider 实现。
+"""Moonshot (Kimi) Provider 实现。
 
-支持 Anthropic messages API。
+支持 Moonshot API（兼容 OpenAI 格式）。
 """
 
 from __future__ import annotations
@@ -9,45 +9,50 @@ import logging
 from typing import Any, Dict, Iterator, List, Optional
 
 from agentforge.providers.base import Provider, ProviderCapabilities
-from agentforge.providers.client_factory import create_anthropic_client
-from agentforge.providers.transports import AnthropicTransport
+from agentforge.providers.client_factory import create_moonshot_client
+from agentforge.providers.transports import ChatCompletionsTransport
 from agentforge.types import NormalizedResponse, Usage
 from agentforge.types.errors import ProviderError, ProviderRateLimitError
+from agentforge.utils.schema_sanitizer import sanitize_moonshot_tools
 
 logger = logging.getLogger(__name__)
 
 
-class AnthropicProvider(Provider):
-    """Anthropic Provider。
+class MoonshotProvider(Provider):
+    """Moonshot (Kimi) Provider。
 
     支持：
-    - messages API
+    - OpenAI 兼容 API
     - 流式响应
-    - 工具调用
-    - 视觉能力
-    - Prompt Caching
-    - Extended Thinking
+    - 长上下文（最高 128K）
 
     使用示例：
-        provider = AnthropicProvider(
-            api_key="sk-ant-...",
-            model="claude-3-opus",
+        provider = MoonshotProvider(
+            api_key="sk-...",
+            model="moonshot-v1-8k",
         )
 
-        response = provider.complete(messages, tools=tools)
+        response = provider.complete(messages)
     """
 
-    name = "anthropic"
+    name = "moonshot"
+
+    # Moonshot 模型列表
+    MODELS = {
+        "moonshot-v1-8k": {"context_length": 8192},
+        "moonshot-v1-32k": {"context_length": 32768},
+        "moonshot-v1-128k": {"context_length": 131072},
+    }
 
     def __init__(
         self,
         api_key: str,
         base_url: Optional[str] = None,
-        model: str = "claude-3-opus-20240229",
+        model: str = "moonshot-v1-8k",
         timeout: float = 300.0,
         **kwargs,
     ):
-        """初始化 Anthropic Provider。
+        """初始化 Moonshot Provider。
 
         Args:
             api_key: API 密钥
@@ -67,29 +72,18 @@ class AnthropicProvider(Provider):
         return ProviderCapabilities(
             supports_tools=True,
             supports_streaming=True,
-            supports_vision=True,
-            supports_caching=True,
-            supports_reasoning=True,  # Anthropic 支持 extended thinking
+            supports_vision=False,
+            supports_caching=False,
+            supports_reasoning=False,
         )
 
-    def supports(self, capability: str) -> bool:
-        """检查是否支持特定能力。
-
-        Args:
-            capability: 能力名称
-
-        Returns:
-            是否支持
-        """
-        return self.capabilities.supports(capability)
-
-    def _default_transport(self) -> AnthropicTransport:
-        """默认 Transport。"""
-        return AnthropicTransport()
+    def _default_transport(self) -> ChatCompletionsTransport:
+        """默认 Transport（使用 OpenAI 兼容格式）。"""
+        return ChatCompletionsTransport()
 
     def _create_client(self) -> Any:
         """创建 API 客户端。"""
-        return create_anthropic_client(
+        return create_moonshot_client(
             api_key=self._api_key,
             base_url=self._base_url,
             timeout=self._timeout,
@@ -105,60 +99,55 @@ class AnthropicProvider(Provider):
 
         Args:
             messages: 消息列表
-            tools: 工具定义
+            tools: 工具定义（需要 Moonshot 特定清理）
             **kwargs: 其他参数
 
         Yields:
             原生响应块
         """
         if self._client is None:
-            # SDK 未安装或 API 密钥未配置，返回模拟响应
-            logger.warning("Anthropic SDK 未安装或 API 密钥未配置，使用模拟响应")
+            logger.warning("Moonshot SDK 未安装或 API 密钥未配置，使用模拟响应")
             yield {
                 "content": "这是一个模拟响应（SDK 未安装或密钥未配置）。",
                 "model": self._model,
-                "finish_reason": "end_turn",
+                "finish_reason": "stop",
             }
             return
 
         try:
-            # 提取 system prompt
-            system = kwargs.pop("system", None)
-
             # 构建请求参数
             request_params = {
                 "model": kwargs.get("model", self._model),
                 "messages": messages,
-                "max_tokens": kwargs.get("max_tokens", 16384),
+                "stream": True,
             }
 
-            if system:
-                request_params["system"] = system
-
+            # Moonshot 特定工具 schema 清理
             if tools:
-                request_params["tools"] = tools
+                sanitized_tools = sanitize_moonshot_tools(tools)
+                request_params["tools"] = sanitized_tools
 
             # 添加其他参数
-            for key in ["temperature", "top_p", "top_k"]:
+            for key in ["max_tokens", "temperature", "top_p"]:
                 if key in kwargs:
                     request_params[key] = kwargs[key]
 
             # 执行流式调用
-            with self._client.messages.stream(**request_params) as stream:
-                for event in stream:
-                    yield event
+            stream = self._client.chat.completions.create(**request_params)
+
+            for chunk in stream:
+                yield chunk
 
         except Exception as e:
-            # 检查是否是速率限制错误
             error_str = str(e).lower()
             if "rate" in error_str or "limit" in error_str or "429" in error_str:
                 raise ProviderRateLimitError(
-                    f"Anthropic 速率限制: {e}",
+                    f"Moonshot 速率限制: {e}",
                     provider=self.name,
                 ) from e
             else:
                 raise ProviderError(
-                    f"Anthropic API 调用失败: {e}",
+                    f"Moonshot API 调用失败: {e}",
                     provider=self.name,
                 ) from e
 
@@ -172,39 +161,26 @@ class AnthropicProvider(Provider):
 
         Args:
             messages: 消息列表
-            tools: 工具列表（可选）
+            tools: 工具列表（Moonshot 支持，但需要 schema 清理）
             **kwargs: 其他参数
 
         Yields:
             响应块
         """
-        # 使用 Transport 转换消息
-        system, converted_messages = self.transport.convert_messages(messages, **kwargs)
+        # 转换消息
+        converted_messages = self.transport.convert_messages(messages)
 
-        # 转换工具格式
+        # 转换工具（Moonshot 支持，但需要特定清理）
         converted_tools = None
-        if tools:
+        if tools and self.capabilities.supports_tools:
             converted_tools = self.transport.convert_tools(tools)
-
-        # 构建请求参数
-        request_kwargs = self.transport.build_kwargs(
-            model=self._model,
-            messages=messages,
-            tools=tools,
-            max_tokens=kwargs.get("max_tokens", 16384),
-            stream=True,
-            **kwargs,
-        )
-
-        # 添加 system prompt
-        if system:
-            request_kwargs["system"] = system
 
         # 执行流式调用
         for raw_response in self._do_stream(
             messages=converted_messages,
             tools=converted_tools,
-            **request_kwargs,
+            model=kwargs.get("model", self._model),
+            **kwargs,
         ):
             yield self.transport.normalize_response(raw_response)
 
@@ -218,7 +194,7 @@ class AnthropicProvider(Provider):
 
         Args:
             messages: 消息列表
-            tools: 工具列表（可选）
+            tools: 工具列表（Moonshot 支持，但需要 schema 清理）
             **kwargs: 其他参数
 
         Returns:

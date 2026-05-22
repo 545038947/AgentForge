@@ -1,6 +1,12 @@
-"""Anthropic Provider 实现。
+"""DeepSeek Provider 实现。
 
-支持 Anthropic messages API。
+支持 DeepSeek API（兼容 OpenAI 格式）。
+
+DeepSeek 特性：
+- deepseek-chat: 通用对话模型
+- deepseek-reasoner: 推理模型，返回 reasoning_content
+
+参考 hermes-agent/plugins/model-providers/deepseek/__init__.py。
 """
 
 from __future__ import annotations
@@ -9,45 +15,49 @@ import logging
 from typing import Any, Dict, Iterator, List, Optional
 
 from agentforge.providers.base import Provider, ProviderCapabilities
-from agentforge.providers.client_factory import create_anthropic_client
-from agentforge.providers.transports import AnthropicTransport
+from agentforge.providers.client_factory import create_deepseek_client
+from agentforge.providers.transports import ChatCompletionsTransport
 from agentforge.types import NormalizedResponse, Usage
 from agentforge.types.errors import ProviderError, ProviderRateLimitError
 
 logger = logging.getLogger(__name__)
 
 
-class AnthropicProvider(Provider):
-    """Anthropic Provider。
+class DeepSeekProvider(Provider):
+    """DeepSeek Provider。
 
     支持：
-    - messages API
+    - OpenAI 兼容 API
     - 流式响应
     - 工具调用
-    - 视觉能力
-    - Prompt Caching
-    - Extended Thinking
+    - 推理能力（DeepSeek-Reasoner）
 
     使用示例：
-        provider = AnthropicProvider(
-            api_key="sk-ant-...",
-            model="claude-3-opus",
+        provider = DeepSeekProvider(
+            api_key="sk-...",
+            model="deepseek-chat",
         )
 
         response = provider.complete(messages, tools=tools)
     """
 
-    name = "anthropic"
+    name = "deepseek"
+
+    # DeepSeek 模型列表
+    MODELS = {
+        "deepseek-chat": {"context_length": 64000, "supports_reasoning": False},
+        "deepseek-reasoner": {"context_length": 64000, "supports_reasoning": True},
+    }
 
     def __init__(
         self,
         api_key: str,
         base_url: Optional[str] = None,
-        model: str = "claude-3-opus-20240229",
+        model: str = "deepseek-chat",
         timeout: float = 300.0,
         **kwargs,
     ):
-        """初始化 Anthropic Provider。
+        """初始化 DeepSeek Provider。
 
         Args:
             api_key: API 密钥
@@ -64,36 +74,38 @@ class AnthropicProvider(Provider):
     @property
     def capabilities(self) -> ProviderCapabilities:
         """Provider 能力。"""
+        # 检查是否是推理模型
+        model_info = self.MODELS.get(self._model, {})
+        supports_reasoning = model_info.get("supports_reasoning", False)
+
         return ProviderCapabilities(
             supports_tools=True,
             supports_streaming=True,
-            supports_vision=True,
-            supports_caching=True,
-            supports_reasoning=True,  # Anthropic 支持 extended thinking
+            supports_vision=False,
+            supports_caching=False,
+            supports_reasoning=supports_reasoning,
         )
 
-    def supports(self, capability: str) -> bool:
-        """检查是否支持特定能力。
+    @property
+    def model(self) -> str:
+        """当前模型名称。"""
+        return self._model
 
-        Args:
-            capability: 能力名称
-
-        Returns:
-            是否支持
-        """
-        return self.capabilities.supports(capability)
-
-    def _default_transport(self) -> AnthropicTransport:
-        """默认 Transport。"""
-        return AnthropicTransport()
+    def _default_transport(self) -> ChatCompletionsTransport:
+        """默认 Transport（使用 OpenAI 兼容格式）。"""
+        return ChatCompletionsTransport()
 
     def _create_client(self) -> Any:
         """创建 API 客户端。"""
-        return create_anthropic_client(
+        return create_deepseek_client(
             api_key=self._api_key,
             base_url=self._base_url,
             timeout=self._timeout,
         )
+
+    def _is_reasoner_model(self) -> bool:
+        """检查是否为推理模型。"""
+        return self._model == "deepseek-reasoner"
 
     def _do_stream(
         self,
@@ -112,53 +124,55 @@ class AnthropicProvider(Provider):
             原生响应块
         """
         if self._client is None:
-            # SDK 未安装或 API 密钥未配置，返回模拟响应
-            logger.warning("Anthropic SDK 未安装或 API 密钥未配置，使用模拟响应")
+            logger.warning("DeepSeek SDK 未安装或 API 密钥未配置，使用模拟响应")
             yield {
                 "content": "这是一个模拟响应（SDK 未安装或密钥未配置）。",
                 "model": self._model,
-                "finish_reason": "end_turn",
+                "finish_reason": "stop",
             }
             return
 
         try:
-            # 提取 system prompt
-            system = kwargs.pop("system", None)
-
             # 构建请求参数
             request_params = {
                 "model": kwargs.get("model", self._model),
                 "messages": messages,
-                "max_tokens": kwargs.get("max_tokens", 16384),
+                "stream": True,
             }
-
-            if system:
-                request_params["system"] = system
 
             if tools:
                 request_params["tools"] = tools
 
             # 添加其他参数
-            for key in ["temperature", "top_p", "top_k"]:
+            for key in ["max_tokens", "temperature", "top_p", "frequency_penalty", "presence_penalty"]:
                 if key in kwargs:
                     request_params[key] = kwargs[key]
 
+            # DeepSeek-Reasoner 特定参数
+            if self._is_reasoner_model():
+                # 推理模型可以配置推理努力程度
+                reasoning_effort = kwargs.get("reasoning_effort")
+                if reasoning_effort:
+                    # DeepSeek 使用 extra_body 传递推理配置
+                    extra_body = request_params.setdefault("extra_body", {})
+                    extra_body["reasoning_effort"] = reasoning_effort
+
             # 执行流式调用
-            with self._client.messages.stream(**request_params) as stream:
-                for event in stream:
-                    yield event
+            stream = self._client.chat.completions.create(**request_params)
+
+            for chunk in stream:
+                yield chunk
 
         except Exception as e:
-            # 检查是否是速率限制错误
             error_str = str(e).lower()
             if "rate" in error_str or "limit" in error_str or "429" in error_str:
                 raise ProviderRateLimitError(
-                    f"Anthropic 速率限制: {e}",
+                    f"DeepSeek 速率限制: {e}",
                     provider=self.name,
                 ) from e
             else:
                 raise ProviderError(
-                    f"Anthropic API 调用失败: {e}",
+                    f"DeepSeek API 调用失败: {e}",
                     provider=self.name,
                 ) from e
 
@@ -178,35 +192,38 @@ class AnthropicProvider(Provider):
         Yields:
             响应块
         """
-        # 使用 Transport 转换消息
-        system, converted_messages = self.transport.convert_messages(messages, **kwargs)
+        # 转换消息
+        converted_messages = self.transport.convert_messages(messages)
 
-        # 转换工具格式
+        # 转换工具
         converted_tools = None
-        if tools:
+        if tools and self.capabilities.supports_tools:
             converted_tools = self.transport.convert_tools(tools)
-
-        # 构建请求参数
-        request_kwargs = self.transport.build_kwargs(
-            model=self._model,
-            messages=messages,
-            tools=tools,
-            max_tokens=kwargs.get("max_tokens", 16384),
-            stream=True,
-            **kwargs,
-        )
-
-        # 添加 system prompt
-        if system:
-            request_kwargs["system"] = system
 
         # 执行流式调用
         for raw_response in self._do_stream(
             messages=converted_messages,
             tools=converted_tools,
-            **request_kwargs,
+            model=kwargs.get("model", self._model),
+            **kwargs,
         ):
-            yield self.transport.normalize_response(raw_response)
+            normalized = self.transport.normalize_response(raw_response)
+
+            # DeepSeek-Reasoner: 提取 reasoning_content
+            if self._is_reasoner_model() and normalized.provider_data:
+                reasoning_content = normalized.provider_data.get("reasoning_content")
+                if reasoning_content:
+                    # 将 reasoning_content 合并到 reasoning 字段
+                    normalized = NormalizedResponse(
+                        content=normalized.content,
+                        tool_calls=normalized.tool_calls,
+                        finish_reason=normalized.finish_reason,
+                        reasoning=reasoning_content,
+                        usage=normalized.usage,
+                        provider_data=normalized.provider_data,
+                    )
+
+            yield normalized
 
     def complete(
         self,
