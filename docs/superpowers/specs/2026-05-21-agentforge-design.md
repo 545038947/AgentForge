@@ -147,12 +147,19 @@ agentforge/
 ├── interrupt/
 │   ├── __init__.py
 │   └── cooperative.py
+├── core/
+│   ├── __init__.py
+│   ├── iteration_budget.py   # 迭代预算控制
+│   ├── credential_pool.py    # 凭证池管理
+│   ├── fallback.py           # Provider 故障转移
+│   └── retry.py              # 重试策略
 ├── ext/                     # 框架开发者 API
 │   └── __init__.py
 └── utils/
     ├── __init__.py
     ├── platform.py
-    └── logging.py
+    ├── logging.py
+    └── model_metadata.py    # 模型元数据
 ```
 
 ## 3. 公共 API
@@ -190,6 +197,15 @@ from agentforge.events import on_event, Event
 
 # 中断
 from agentforge.interrupt import InterruptToken
+
+# 核心功能
+from agentforge.core import (
+    IterationBudget,
+    CredentialPool,
+    PooledCredential,
+    FallbackProvider,
+    FallbackChain,
+)
 
 # 便捷函数
 from agentforge.agent import create_agent, quick_chat
@@ -311,6 +327,12 @@ class Agent:
     - DelegationManager：子 Agent 委托、隔离管理
     - EventDispatcher：事件分发、监听器管理
     - InterruptHandler：中断传播、令牌管理
+    
+    Agent 状态追踪：
+    - _last_activity_ts：最后活动时间戳
+    - _last_activity_desc：最后活动描述
+    - _rate_limit_state：速率限制状态
+    - _api_call_count：API 调用计数
     """
     
     def __init__(
@@ -321,6 +343,8 @@ class Agent:
         tools: List[Union[Tool, Callable]] = None,
         skills: List[Skill] = None,
         memory: MemoryProvider = None,
+        session_provider: SessionProvider = None,
+        toolset_registry: ToolsetRegistry = None,
         **kwargs,
     ):
         self.settings = settings or Settings(model=model, api_key=api_key, **kwargs)
@@ -335,6 +359,14 @@ class Agent:
         self._event_dispatcher = EventDispatcher()
         self._interrupt_handler = InterruptHandler()
         self._provider = self._create_provider()
+        self._session_provider = session_provider or InMemorySessionProvider()
+        self._toolset_registry = toolset_registry or ToolsetRegistry()
+        
+        # Agent 状态追踪（用于诊断和监控）
+        self._last_activity_ts: float = time.time()
+        self._last_activity_desc: str = "初始化"
+        self._rate_limit_state: Optional[RateLimitState] = None
+        self._api_call_count: int = 0
         
         # 注册工具
         self._tools: Dict[str, Tool] = {}
@@ -344,6 +376,33 @@ class Agent:
         # 激活技能
         for skill in (skills or []):
             skill.activate(self)
+    
+    def _touch_activity(self, desc: str) -> None:
+        """更新活动状态（线程安全）。"""
+        self._last_activity_ts = time.time()
+        self._last_activity_desc = desc
+    
+    def _capture_rate_limits(self, http_response: Any) -> None:
+        """从 HTTP 响应捕获速率限制状态。"""
+        if http_response is None:
+            return
+        headers = getattr(http_response, "headers", None)
+        if not headers:
+            return
+        try:
+            self._rate_limit_state = parse_rate_limit_headers(headers)
+        except Exception:
+            pass
+    
+    def get_activity_summary(self) -> Dict[str, Any]:
+        """返回 Agent 当前活动状态摘要（用于诊断）。"""
+        return {
+            "last_activity_ts": self._last_activity_ts,
+            "last_activity_desc": self._last_activity_desc,
+            "seconds_since_activity": round(time.time() - self._last_activity_ts, 1),
+            "api_call_count": self._api_call_count,
+            "rate_limit_state": self._rate_limit_state,
+        }
     
     def run(
         self,
@@ -1555,6 +1614,1046 @@ class DelegateTool(Tool):
             )
 ```
 
+## 5.5 工具集系统
+
+工具集系统提供工具的分组管理和条件启用机制。
+
+### 5.5.1 工具集定义
+
+```python
+@dataclass
+class ToolsetDefinition:
+    """工具集定义。
+    
+    支持工具分组和条件启用，参考 hermes-agent/toolsets.py 实现。
+    """
+    description: str
+    tools: List[str] = field(default_factory=list)
+    includes: List[str] = field(default_factory=list)  # 包含的其他工具集
+    
+    # 条件启用
+    check_fn: Optional[Callable[[], bool]] = None  # 运行时检查函数
+    requires_env: List[str] = field(default_factory=list)  # 需要的环境变量
+    
+    def is_available(self) -> bool:
+        """检查工具集是否可用。"""
+        # 检查环境变量
+        for env_var in self.requires_env:
+            if not os.environ.get(env_var):
+                return False
+        
+        # 检查自定义函数
+        if self.check_fn is not None:
+            try:
+                return self.check_fn()
+            except Exception:
+                return False
+        
+        return True
+
+
+class ToolsetRegistry:
+    """工具集注册表，管理工具集定义和解析。"""
+    
+    def __init__(self):
+        self._definitions: Dict[str, ToolsetDefinition] = {}
+        self._tool_to_toolset: Dict[str, str] = {}
+    
+    def register(self, name: str, definition: ToolsetDefinition) -> None:
+        """注册工具集。"""
+        self._definitions[name] = definition
+        for tool_name in definition.tools:
+            self._tool_to_toolset[tool_name] = name
+    
+    def get(self, name: str) -> Optional[ToolsetDefinition]:
+        """获取工具集定义。"""
+        return self._definitions.get(name)
+    
+    def resolve(self, name: str, visited: Set[str] = None) -> List[str]:
+        """递归解析工具集，返回所有工具名称。"""
+        if visited is None:
+            visited = set()
+        
+        if name in visited:
+            return []  # 防止循环引用
+        
+        visited.add(name)
+        definition = self._definitions.get(name)
+        if not definition:
+            return []
+        
+        tools = set(definition.tools)
+        
+        # 递归解析包含的工具集
+        for included_name in definition.includes:
+            included_tools = self.resolve(included_name, visited)
+            tools.update(included_tools)
+        
+        return sorted(tools)
+    
+    def check_requirements(self, name: str) -> Optional[str]:
+        """检查工具集要求是否满足，返回错误信息或 None。"""
+        definition = self._definitions.get(name)
+        if not definition:
+            return f"工具集 '{name}' 不存在"
+        
+        # 检查环境变量
+        missing_env = [
+            env for env in definition.requires_env
+            if not os.environ.get(env)
+        ]
+        if missing_env:
+            return f"缺少环境变量: {', '.join(missing_env)}"
+        
+        # 检查自定义函数
+        if definition.check_fn is not None:
+            try:
+                if not definition.check_fn():
+                    return f"工具集 '{name}' 的条件检查未通过"
+            except Exception as e:
+                return f"工具集 '{name}' 条件检查异常: {e}"
+        
+        return None
+    
+    def list_available(self) -> List[str]:
+        """列出所有可用的工具集。"""
+        return [
+            name for name, definition in self._definitions.items()
+            if definition.is_available()
+        ]
+```
+
+### 5.5.2 内置工具集
+
+```python
+# 预定义工具集（参考 hermes-agent/toolsets.py）
+BUILTIN_TOOLSETS = {
+    "web": ToolsetDefinition(
+        description="网络搜索和内容提取工具",
+        tools=["web_search", "web_extract"],
+    ),
+    "terminal": ToolsetDefinition(
+        description="终端命令执行工具",
+        tools=["terminal", "process"],
+    ),
+    "file": ToolsetDefinition(
+        description="文件操作工具",
+        tools=["read_file", "write_file", "patch", "search_files"],
+    ),
+    "vision": ToolsetDefinition(
+        description="图像分析工具",
+        tools=["vision_analyze"],
+    ),
+    "browser": ToolsetDefinition(
+        description="浏览器自动化工具",
+        tools=[
+            "browser_navigate", "browser_snapshot", "browser_click",
+            "browser_type", "browser_scroll", "browser_back",
+        ],
+        includes=["web"],  # 包含 web 工具集
+    ),
+    "delegate": ToolsetDefinition(
+        description="子 Agent 委托工具",
+        tools=["delegate_task"],
+    ),
+    "messaging": ToolsetDefinition(
+        description="跨平台消息发送工具",
+        tools=["send_message"],
+        # 条件：需要 gateway 运行
+        check_fn=lambda: is_gateway_running(),
+    ),
+    "homeassistant": ToolsetDefinition(
+        description="Home Assistant 智能家居控制",
+        tools=["ha_list_entities", "ha_get_state", "ha_call_service"],
+        requires_env=["HASS_TOKEN"],  # 需要环境变量
+    ),
+}
+```
+
+## 5.6 会话管理系统
+
+会话管理系统提供持久化存储和会话链追踪。
+
+### 5.6.1 会话提供者接口
+
+```python
+@dataclass
+class SessionInfo:
+    """会话信息。"""
+    id: str
+    source: str  # "cli", "telegram", "discord" 等
+    user_id: Optional[str] = None
+    model: Optional[str] = None
+    model_config: Optional[Dict[str, Any]] = None
+    system_prompt: Optional[str] = None
+    parent_session_id: Optional[str] = None  # 压缩链/分支链
+    started_at: float = field(default_factory=time.time)
+    ended_at: Optional[float] = None
+    end_reason: Optional[str] = None
+    message_count: int = 0
+    title: Optional[str] = None
+
+
+@dataclass
+class MessageRecord:
+    """消息记录。"""
+    id: int
+    session_id: str
+    role: str
+    content: Any  # str 或 List[ContentBlock]
+    tool_call_id: Optional[str] = None
+    tool_calls: Optional[List[Dict]] = None
+    tool_name: Optional[str] = None
+    timestamp: float = field(default_factory=time.time)
+    token_count: Optional[int] = None
+    finish_reason: Optional[str] = None
+    reasoning: Optional[str] = None
+
+
+class SessionProvider(ABC):
+    """会话存储提供者抽象基类。
+    
+    支持会话持久化、消息历史、压缩链追踪。
+    参考 hermes-agent/hermes_state.py 的 SessionDB 实现。
+    """
+    
+    @abstractmethod
+    def create_session(
+        self,
+        session_id: str,
+        source: str,
+        **kwargs,
+    ) -> str:
+        """创建新会话。"""
+        ...
+    
+    @abstractmethod
+    def get_session(self, session_id: str) -> Optional[SessionInfo]:
+        """获取会话信息。"""
+        ...
+    
+    @abstractmethod
+    def end_session(self, session_id: str, end_reason: str) -> None:
+        """结束会话。"""
+        ...
+    
+    @abstractmethod
+    def append_message(
+        self,
+        session_id: str,
+        role: str,
+        content: Any,
+        **kwargs,
+    ) -> int:
+        """追加消息到会话。"""
+        ...
+    
+    @abstractmethod
+    def get_messages(self, session_id: str) -> List[MessageRecord]:
+        """获取会话所有消息。"""
+        ...
+    
+    # 标题管理
+    @abstractmethod
+    def set_session_title(self, session_id: str, title: str) -> bool:
+        """设置会话标题。"""
+        ...
+    
+    @abstractmethod
+    def get_session_by_title(self, title: str) -> Optional[SessionInfo]:
+        """通过标题查找会话。"""
+        ...
+    
+    # 压缩链追踪
+    def get_compression_tip(self, session_id: str) -> str:
+        """获取压缩链的最新会话 ID。
+        
+        压缩链：parent_session_id 链接的会话序列，
+        用于上下文压缩后继续对话。
+        """
+        current = session_id
+        for _ in range(100):  # 防止无限循环
+            session = self.get_session(current)
+            if not session:
+                return current
+            # 查找子会话（end_reason='compression'）
+            child = self._find_compression_child(current)
+            if not child:
+                return current
+            current = child.id
+        return current
+    
+    def get_session_lineage(self, session_id: str) -> List[str]:
+        """获取会话的血统链（从根到当前）。"""
+        lineage = [session_id]
+        current = session_id
+        while True:
+            session = self.get_session(current)
+            if not session or not session.parent_session_id:
+                break
+            lineage.append(session.parent_session_id)
+            current = session.parent_session_id
+        return list(reversed(lineage))
+    
+    # 搜索功能
+    @abstractmethod
+    def search_messages(
+        self,
+        query: str,
+        session_id: str = None,
+        limit: int = 20,
+    ) -> List[MessageRecord]:
+        """搜索消息内容（全文搜索）。"""
+        ...
+    
+    @abstractmethod
+    def list_sessions(
+        self,
+        source: str = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[SessionInfo]:
+        """列出会话。"""
+        ...
+    
+    # 消息编码/解码（用于多模态内容持久化）
+    @staticmethod
+    def encode_content(content: Any) -> Any:
+        """编码内容用于存储。
+        
+        多模态内容（List[ContentBlock]）需要序列化为 JSON。
+        使用哨兵前缀区分 JSON 编码内容和纯文本。
+        """
+        if content is None or isinstance(content, (str, bytes, int, float)):
+            return content
+        # 使用 NUL 字节作为哨兵前缀（不会出现在正常文本中）
+        return "\x00json:" + json.dumps(content)
+    
+    @staticmethod
+    def decode_content(content: Any) -> Any:
+        """解码存储的内容。"""
+        if isinstance(content, str) and content.startswith("\x00json:"):
+            try:
+                return json.loads(content[6:])
+            except json.JSONDecodeError:
+                return content
+        return content
+
+
+class InMemorySessionProvider(SessionProvider):
+    """内存会话提供者（默认实现）。"""
+    
+    def __init__(self):
+        self._sessions: Dict[str, SessionInfo] = {}
+        self._messages: Dict[str, List[MessageRecord]] = {}
+        self._title_index: Dict[str, str] = {}
+        self._lock = threading.Lock()
+        self._message_id_counter = 0
+    
+    def create_session(self, session_id: str, source: str, **kwargs) -> str:
+        with self._lock:
+            session = SessionInfo(
+                id=session_id,
+                source=source,
+                **kwargs,
+            )
+            self._sessions[session_id] = session
+            self._messages[session_id] = []
+        return session_id
+    
+    def get_session(self, session_id: str) -> Optional[SessionInfo]:
+        with self._lock:
+            return self._sessions.get(session_id)
+    
+    def end_session(self, session_id: str, end_reason: str) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session:
+                session.ended_at = time.time()
+                session.end_reason = end_reason
+    
+    def append_message(self, session_id: str, role: str, content: Any, **kwargs) -> int:
+        with self._lock:
+            self._message_id_counter += 1
+            record = MessageRecord(
+                id=self._message_id_counter,
+                session_id=session_id,
+                role=role,
+                content=self.encode_content(content),
+                **kwargs,
+            )
+            self._messages.setdefault(session_id, []).append(record)
+            
+            session = self._sessions.get(session_id)
+            if session:
+                session.message_count += 1
+            
+            return record.id
+    
+    def get_messages(self, session_id: str) -> List[MessageRecord]:
+        with self._lock:
+            messages = self._messages.get(session_id, [])
+            # 解码内容
+            return [
+                MessageRecord(
+                    **{k: self.decode_content(v) if k == "content" else v
+                       for k, v in dataclasses.asdict(m).items()}
+                )
+                for m in messages
+            ]
+    
+    def set_session_title(self, session_id: str, title: str) -> bool:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if not session:
+                return False
+            # 检查标题唯一性
+            if title in self._title_index and self._title_index[title] != session_id:
+                raise ValueError(f"标题 '{title}' 已被其他会话使用")
+            # 清除旧标题索引
+            if session.title:
+                self._title_index.pop(session.title, None)
+            session.title = title
+            self._title_index[title] = session_id
+            return True
+    
+    def get_session_by_title(self, title: str) -> Optional[SessionInfo]:
+        with self._lock:
+            session_id = self._title_index.get(title)
+            if session_id:
+                return self._sessions.get(session_id)
+            return None
+    
+    def search_messages(self, query: str, session_id: str = None, limit: int = 20) -> List[MessageRecord]:
+        """简单的字符串匹配搜索。"""
+        results = []
+        with self._lock:
+            sessions_to_search = [session_id] if session_id else list(self._messages.keys())
+            for sid in sessions_to_search:
+                for msg in self._messages.get(sid, []):
+                    content = self.decode_content(msg.content)
+                    if isinstance(content, str) and query.lower() in content.lower():
+                        results.append(msg)
+                        if len(results) >= limit:
+                            return results
+        return results
+    
+    def list_sessions(self, source: str = None, limit: int = 20, offset: int = 0) -> List[SessionInfo]:
+        with self._lock:
+            sessions = list(self._sessions.values())
+            if source:
+                sessions = [s for s in sessions if s.source == source]
+            sessions.sort(key=lambda s: s.started_at, reverse=True)
+            return sessions[offset:offset + limit]
+```
+
+## 5.7 模型能力系统
+
+模型能力系统提供 Provider 声明和查询模型特性的机制。
+
+### 5.7.1 模型能力定义
+
+```python
+@dataclass
+class ModelCapabilities:
+    """模型能力描述。
+    
+    Provider 通过此结构声明其支持的模型特性，
+    用于运行时决策（如是否启用特定功能）。
+    """
+    # 上下文窗口
+    context_length: int = 128000
+    max_output_tokens: int = 4096
+    
+    # 功能支持
+    supports_tools: bool = True
+    supports_vision: bool = False
+    supports_streaming: bool = True
+    
+    # 推理支持
+    supports_reasoning: bool = False
+    reasoning_effort_levels: List[str] = field(default_factory=list)
+    
+    # 特殊功能
+    supports_prompt_caching: bool = False
+    supports_parallel_tool_calls: bool = True
+    
+    # 价格信息（可选）
+    pricing: Optional[Dict[str, float]] = None  # {"prompt": 0.01, "completion": 0.03}
+
+
+class ModelMetadataProvider(ABC):
+    """模型元数据提供者接口。"""
+    
+    @abstractmethod
+    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+        """获取模型能力描述。"""
+        ...
+    
+    @abstractmethod
+    def estimate_tokens(self, content: Union[str, List[ContentBlock]]) -> int:
+        """估算内容的 Token 数量。"""
+        ...
+    
+    @abstractmethod
+    def fetch_model_metadata(self, model: str) -> Dict[str, Any]:
+        """从远程获取模型元数据（如 OpenRouter API）。"""
+        ...
+```
+
+### 5.7.2 默认实现
+
+```python
+class DefaultModelMetadataProvider(ModelMetadataProvider):
+    """默认模型元数据提供者。
+    
+    参考 hermes-agent/agent/model_metadata.py 实现。
+    """
+    
+    # Token 估算常量
+    CHARS_PER_TOKEN = 4  # 平均每 Token 约 4 字符
+    IMAGE_TOKEN_ESTIMATE = 1600  # 单张图片约 1600 Token
+    
+    # 预定义模型能力
+    MODEL_CAPABILITIES: Dict[str, ModelCapabilities] = {
+        # OpenAI
+        "gpt-4": ModelCapabilities(
+            context_length=128000,
+            supports_tools=True,
+            supports_vision=True,
+            supports_parallel_tool_calls=True,
+        ),
+        "gpt-4-turbo": ModelCapabilities(
+            context_length=128000,
+            supports_tools=True,
+            supports_vision=True,
+            supports_prompt_caching=True,
+        ),
+        "gpt-4o": ModelCapabilities(
+            context_length=128000,
+            supports_tools=True,
+            supports_vision=True,
+            supports_prompt_caching=True,
+        ),
+        
+        # Anthropic
+        "claude-opus-4": ModelCapabilities(
+            context_length=200000,
+            supports_tools=True,
+            supports_vision=True,
+            supports_prompt_caching=True,
+        ),
+        "claude-sonnet-4": ModelCapabilities(
+            context_length=200000,
+            supports_tools=True,
+            supports_vision=True,
+            supports_prompt_caching=True,
+        ),
+        
+        # 中国大模型
+        "deepseek-v3": ModelCapabilities(
+            context_length=64000,
+            supports_tools=True,
+            supports_reasoning=True,
+        ),
+        "qwen-max": ModelCapabilities(
+            context_length=32000,
+            supports_tools=True,
+            supports_vision=True,
+        ),
+        "kimi": ModelCapabilities(
+            context_length=200000,
+            supports_tools=True,
+            supports_reasoning=True,
+            reasoning_effort_levels=["low", "medium", "high"],
+        ),
+    }
+    
+    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+        """获取模型能力描述。"""
+        # 精确匹配
+        if model in self.MODEL_CAPABILITIES:
+            return self.MODEL_CAPABILITIES[model]
+        
+        # 模糊匹配（前缀）
+        model_lower = model.lower()
+        for key, caps in self.MODEL_CAPABILITIES.items():
+            if model_lower.startswith(key.lower()):
+                return caps
+        
+        # 默认值
+        return ModelCapabilities()
+    
+    def estimate_tokens(self, content: Union[str, List[ContentBlock]]) -> int:
+        """估算内容的 Token 数量。"""
+        if isinstance(content, str):
+            return (len(content) + self.CHARS_PER_TOKEN - 1) // self.CHARS_PER_TOKEN
+        
+        total = 0
+        for block in content:
+            if block.type == "text":
+                total += len(block.text) // self.CHARS_PER_TOKEN
+            elif block.type == "image":
+                total += self.IMAGE_TOKEN_ESTIMATE
+            elif block.type == "tool_use":
+                total += len(json.dumps(block.input)) // self.CHARS_PER_TOKEN
+            elif block.type == "tool_result":
+                total += len(block.content) // self.CHARS_PER_TOKEN
+        
+        return total
+    
+    def fetch_model_metadata(self, model: str) -> Dict[str, Any]:
+        """从远程获取模型元数据。"""
+        # 尝试从 OpenRouter 获取
+        try:
+            response = requests.get(
+                "https://openrouter.ai/api/v1/models",
+                timeout=10,
+            )
+            if response.status_code == 200:
+                data = response.json()
+                for m in data.get("data", []):
+                    if m.get("id") == model:
+                        return {
+                            "context_length": m.get("context_length", 128000),
+                            "pricing": m.get("pricing", {}),
+                        }
+        except Exception:
+            pass
+        
+        return {}
+```
+
+## 5.8 迭代预算控制
+
+迭代预算控制系统限制 Agent 的迭代次数，防止无限循环。
+
+### 5.8.1 IterationBudget
+
+```python
+class IterationBudget:
+    """线程安全的迭代计数器，用于控制 Agent 的迭代次数。
+    
+    每个 Agent（父 Agent 或子 Agent）持有独立的 IterationBudget。
+    父 Agent 的预算由 max_iterations 控制（默认 90），
+    子 Agent 的预算由 delegation.max_iterations 控制（默认 50）。
+    
+    execute_code（程序化工具调用）迭代通过 refund() 返还，
+    不计入预算消耗。
+    
+    参考 hermes-agent/agent/iteration_budget.py 实现。
+    """
+    
+    def __init__(self, max_total: int):
+        self.max_total = max_total
+        self._used = 0
+        self._lock = threading.Lock()
+    
+    def consume(self) -> bool:
+        """尝试消耗一次迭代。返回 True 表示允许。"""
+        with self._lock:
+            if self._used >= self.max_total:
+                return False
+            self._used += 1
+            return True
+    
+    def refund(self) -> None:
+        """返还一次迭代（用于 execute_code 轮次）。"""
+        with self._lock:
+            if self._used > 0:
+                self._used -= 1
+    
+    @property
+    def used(self) -> int:
+        """已使用的迭代次数。"""
+        with self._lock:
+            return self._used
+    
+    @property
+    def remaining(self) -> int:
+        """剩余迭代次数。"""
+        with self._lock:
+            return max(0, self.max_total - self._used)
+```
+
+## 5.9 凭证池管理
+
+凭证池管理系统支持多凭证轮换、OAuth 刷新和故障转移。
+
+### 5.9.1 PooledCredential
+
+```python
+@dataclass
+class PooledCredential:
+    """池化凭证条目。
+    
+    支持多种认证类型（API Key、OAuth）和凭证来源（环境变量、手动添加、OAuth 登录）。
+    """
+    provider: str
+    id: str
+    label: str
+    auth_type: str  # "api_key" | "oauth"
+    priority: int
+    source: str  # "manual" | "env:VAR" | "device_code" | ...
+    access_token: str
+    refresh_token: Optional[str] = None
+    
+    # 状态追踪
+    last_status: Optional[str] = None  # "ok" | "exhausted"
+    last_status_at: Optional[float] = None
+    last_error_code: Optional[int] = None
+    last_error_reason: Optional[str] = None
+    last_error_reset_at: Optional[float] = None
+    
+    # OAuth 相关
+    base_url: Optional[str] = None
+    expires_at: Optional[str] = None
+    expires_at_ms: Optional[int] = None
+    
+    # 使用统计
+    request_count: int = 0
+    
+    @property
+    def runtime_api_key(self) -> str:
+        """运行时使用的 API Key。"""
+        return str(self.access_token or "")
+    
+    @property
+    def is_exhausted(self) -> bool:
+        """检查凭证是否在冷却期。"""
+        if self.last_status != "exhausted":
+            return False
+        if self.last_error_reset_at:
+            return time.time() < self.last_error_reset_at
+        # 默认冷却期 1 小时
+        if self.last_status_at:
+            return time.time() < self.last_status_at + 3600
+        return True
+```
+
+### 5.9.2 CredentialPool
+
+```python
+class CredentialPool:
+    """凭证池，管理同一 Provider 的多个凭证。
+    
+    支持：
+    - 凭证选择策略（fill_first、round_robin、random、least_used）
+    - 凭证轮换（当凭证耗尽时自动切换）
+    - OAuth 刷新（自动刷新即将过期的 Token）
+    - 冷却期管理（耗尽的凭证等待恢复）
+    
+    参考 hermes-agent/agent/credential_pool.py 实现。
+    """
+    
+    # 选择策略
+    STRATEGY_FILL_FIRST = "fill_first"
+    STRATEGY_ROUND_ROBIN = "round_robin"
+    STRATEGY_RANDOM = "random"
+    STRATEGY_LEAST_USED = "least_used"
+    
+    def __init__(self, provider: str, entries: List[PooledCredential]):
+        self.provider = provider
+        self._entries = sorted(entries, key=lambda e: e.priority)
+        self._current_id: Optional[str] = None
+        self._strategy = self.STRATEGY_FILL_FIRST
+        self._lock = threading.Lock()
+        self._active_leases: Dict[str, int] = {}
+    
+    def has_credentials(self) -> bool:
+        """是否有凭证。"""
+        return bool(self._entries)
+    
+    def has_available(self) -> bool:
+        """是否有可用凭证（非冷却期）。"""
+        return bool(self._available_entries())
+    
+    def select(self) -> Optional[PooledCredential]:
+        """选择一个凭证。"""
+        with self._lock:
+            return self._select_unlocked()
+    
+    def _available_entries(self) -> List[PooledCredential]:
+        """返回非冷却期的凭证。"""
+        now = time.time()
+        available = []
+        for entry in self._entries:
+            if entry.last_status == "exhausted":
+                reset_at = entry.last_error_reset_at
+                if reset_at and now < reset_at:
+                    continue
+            available.append(entry)
+        return available
+    
+    def _select_unlocked(self) -> Optional[PooledCredential]:
+        """选择凭证（内部方法）。"""
+        available = self._available_entries()
+        if not available:
+            self._current_id = None
+            return None
+        
+        if self._strategy == self.STRATEGY_RANDOM:
+            entry = random.choice(available)
+        elif self._strategy == self.STRATEGY_LEAST_USED:
+            entry = min(available, key=lambda e: e.request_count)
+        elif self._strategy == self.STRATEGY_ROUND_ROBIN:
+            entry = available[0]
+            # 轮换优先级
+            self._rotate_entries()
+        else:
+            entry = available[0]
+        
+        self._current_id = entry.id
+        return entry
+    
+    def mark_exhausted_and_rotate(
+        self,
+        status_code: Optional[int],
+        error_context: Optional[Dict[str, Any]] = None,
+    ) -> Optional[PooledCredential]:
+        """标记当前凭证耗尽并轮换到下一个。"""
+        with self._lock:
+            entry = self.current()
+            if entry is None:
+                return None
+            
+            # 更新状态
+            self._mark_exhausted(entry, status_code, error_context)
+            self._current_id = None
+            
+            # 选择下一个
+            return self._select_unlocked()
+    
+    def _mark_exhausted(
+        self,
+        entry: PooledCredential,
+        status_code: Optional[int],
+        error_context: Optional[Dict[str, Any]],
+    ) -> None:
+        """标记凭证耗尽。"""
+        reset_at = None
+        if error_context:
+            reset_at = error_context.get("reset_at")
+        
+        updated = replace(
+            entry,
+            last_status="exhausted",
+            last_status_at=time.time(),
+            last_error_code=status_code,
+            last_error_reason=error_context.get("reason") if error_context else None,
+            last_error_reset_at=reset_at,
+        )
+        self._replace_entry(entry, updated)
+        self._persist()
+    
+    def try_refresh_current(self) -> Optional[PooledCredential]:
+        """尝试刷新当前凭证（OAuth）。"""
+        with self._lock:
+            entry = self.current()
+            if entry is None:
+                return None
+            return self._refresh_entry(entry, force=True)
+    
+    def reset_statuses(self) -> int:
+        """重置所有凭证状态。"""
+        count = 0
+        for entry in self._entries:
+            if entry.last_status:
+                self._replace_entry(entry, replace(
+                    entry,
+                    last_status=None,
+                    last_status_at=None,
+                    last_error_code=None,
+                ))
+                count += 1
+        if count:
+            self._persist()
+        return count
+```
+
+## 5.10 Provider 故障转移
+
+Provider 故障转移系统支持在主 Provider 失败时自动切换到备用 Provider。
+
+### 5.10.1 FallbackProvider
+
+```python
+@dataclass
+class FallbackProvider:
+    """备用 Provider 配置。"""
+    provider: str
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+    key_env: Optional[str] = None  # 环境变量名
+    
+    def is_valid(self) -> bool:
+        """检查配置是否有效。"""
+        return bool(self.provider)
+```
+
+### 5.10.2 FallbackChain
+
+```python
+class FallbackChain:
+    """Provider 故障转移链。
+    
+    支持多个备用 Provider 的有序切换。
+    当主 Provider 失败（速率限制、认证错误等）时，
+    自动尝试链中的下一个 Provider。
+    
+    参考 hermes-agent/tests/run_agent/test_provider_fallback.py 实现。
+    """
+    
+    def __init__(self, fallbacks: List[Union[Dict, FallbackProvider]]):
+        self._chain: List[FallbackProvider] = []
+        self._index = 0
+        
+        for fb in fallbacks:
+            if isinstance(fb, dict):
+                fb = FallbackProvider(
+                    provider=fb.get("provider", ""),
+                    model=fb.get("model"),
+                    base_url=fb.get("base_url"),
+                    key_env=fb.get("key_env"),
+                )
+            if fb.is_valid():
+                self._chain.append(fb)
+    
+    @property
+    def current(self) -> Optional[FallbackProvider]:
+        """当前备用 Provider。"""
+        if self._index < len(self._chain):
+            return self._chain[self._index]
+        return None
+    
+    @property
+    def is_exhausted(self) -> bool:
+        """是否已耗尽所有备用。"""
+        return self._index >= len(self._chain)
+    
+    def advance(self) -> Optional[FallbackProvider]:
+        """前进到下一个备用 Provider。"""
+        self._index += 1
+        return self.current
+    
+    def reset(self) -> None:
+        """重置到链首。"""
+        self._index = 0
+    
+    def should_fallback(
+        self,
+        error: Exception,
+        pool: Optional[CredentialPool] = None,
+    ) -> bool:
+        """判断是否应该故障转移。
+        
+        考虑因素：
+        1. 错误类型（速率限制、认证错误等）
+        2. 凭证池是否有备用凭证可轮换
+        
+        如果凭证池有多个可用凭证，优先轮换而非故障转移。
+        """
+        # 速率限制错误
+        if isinstance(error, ProviderRateLimitError):
+            # 检查凭证池是否有轮换空间
+            if pool and self._pool_may_recover(pool):
+                return False  # 优先轮换凭证
+            return True
+        
+        # 认证错误
+        if isinstance(error, ProviderResponseError):
+            if error.code in (401, 403):
+                return True
+        
+        # 连接错误
+        if isinstance(error, ProviderConnectionError):
+            return True
+        
+        return False
+    
+    def _pool_may_recover(self, pool: CredentialPool) -> bool:
+        """凭证池是否可以通过轮换恢复。"""
+        entries = pool.entries()
+        if len(entries) <= 1:
+            return False  # 只有一个凭证，无法轮换
+        return pool.has_available()
+```
+
+### 5.10.3 集成到 Agent
+
+```python
+class Agent:
+    def __init__(
+        self,
+        model: str,
+        fallback_model: Union[Dict, List[Dict]] = None,
+        **kwargs,
+    ):
+        # ... 其他初始化 ...
+        
+        # 故障转移链
+        if isinstance(fallback_model, list):
+            self._fallback_chain = FallbackChain(fallback_model)
+        elif fallback_model:
+            self._fallback_chain = FallbackChain([fallback_model])
+        else:
+            self._fallback_chain = FallbackChain([])
+        
+        self._fallback_activated = False
+    
+    def _try_activate_fallback(self) -> bool:
+        """尝试激活备用 Provider。"""
+        if self._fallback_chain.is_exhausted:
+            return False
+        
+        fallback = self._fallback_chain.current
+        if fallback is None:
+            return False
+        
+        # 跳过与当前相同的配置
+        if self._is_same_as_current(fallback):
+            fallback = self._fallback_chain.advance()
+            if fallback is None:
+                return False
+        
+        try:
+            # 解析备用 Provider
+            new_client, new_model = resolve_provider_client(
+                provider=fallback.provider,
+                model=fallback.model,
+                base_url=fallback.base_url,
+                explicit_api_key=self._resolve_fallback_key(fallback),
+            )
+            
+            if new_client is None:
+                # 配置失败，尝试下一个
+                self._fallback_chain.advance()
+                return self._try_activate_fallback()
+            
+            # 切换到备用 Provider
+            self._provider = new_client
+            self.model = new_model
+            self._fallback_activated = True
+            self._fallback_chain.advance()
+            
+            return True
+            
+        except Exception:
+            # 解析失败，尝试下一个
+            self._fallback_chain.advance()
+            return self._try_activate_fallback()
+    
+    def _is_same_as_current(self, fallback: FallbackProvider) -> bool:
+        """检查备用配置是否与当前相同。"""
+        if fallback.provider != self.provider:
+            return False
+        if fallback.model and fallback.model != self.model:
+            return False
+        if fallback.base_url and fallback.base_url != self.base_url:
+            return False
+        return True
+```
+
 ## 6. 扩展点
 
 ### 6.1 扩展点汇总
@@ -1843,17 +2942,22 @@ class EventType:
     AGENT_START = "agent.start"
     AGENT_END = "agent.end"
     AGENT_INTERRUPT = "agent.interrupt"
+    AGENT_THINKING = "agent.thinking"           # 思考过程（流式）
+    AGENT_REASONING = "agent.reasoning"         # 推理过程（流式）
+    AGENT_STATUS = "agent.status"               # 状态更新
     
     # 工具执行
     TOOL_START = "tool.start"
     TOOL_END = "tool.end"
     TOOL_ERROR = "tool.error"
+    TOOL_PROGRESS = "tool.progress"             # 工具执行进度
     TOOL_APPROVAL_REQUIRED = "tool.approval_required"
     
     # Provider 调用
     PROVIDER_REQUEST = "provider.request"
     PROVIDER_RESPONSE = "provider.response"
     PROVIDER_ERROR = "provider.error"
+    STREAM_DELTA = "stream.delta"               # 流式 Token 增量
     
     # 上下文压缩
     COMPRESSION_START = "compression.start"
@@ -1862,6 +2966,11 @@ class EventType:
     # 委托
     DELEGATION_START = "delegation.start"
     DELEGATION_END = "delegation.end"
+    
+    # 用户交互
+    CLARIFY_REQUEST = "clarify.request"         # 澄清请求
+    INTERIM_ASSISTANT = "interim.assistant"     # 中间 assistant 消息
+    TOOL_GENERATED = "tool.generated"           # 工具调用生成
 ```
 
 ### 8.2 事件结构
@@ -2567,12 +3676,12 @@ class SecureApprovalCallback(ApprovalCallback):
 | **P0** | `types/`, `config/` | 核心 | 无 | 类型系统是所有组件基础，配置系统是初始化依赖 |
 | **P1** | `providers/transports/`, `providers/base.py`, `providers/registry.py` | Provider | P0 | Transport 可直接复用 hermes-agent 80% |
 | **P2** | `interrupt/`, `events/` | 基础设施 | P0 | 中断和事件是 Agent 运行的底层设施 |
-| **P3** | `tools/base.py`, `tools/executor.py`, `tools/approval.py` | 工具 | P0, P2 | 工具系统依赖中断机制 |
-| **P4** | `agent.py`, `context/` | 引擎 | P0-P3 | Agent 门面整合所有组件 |
+| **P3** | `tools/base.py`, `tools/executor.py`, `tools/approval.py`, `tools/toolsets.py` | 工具 | P0, P2 | 工具系统依赖中断机制，工具集定义条件启用 |
+| **P4** | `agent.py`, `context/`, `core/iteration_budget.py` | 引擎 | P0-P3 | Agent 门面整合所有组件，迭代预算控制循环次数 |
 | **P5** | `delegation/` | 委托 | P0-P4 | 委托依赖 Agent 和工具系统 |
-| **P6** | `memory/`, `skills/` | 扩展 | P0-P4 | 存储和技能扩展组件 |
-| **P7** | `providers/builtins/`, `tools/builtins/` | 内置实现 | P1, P3 | 内置 Provider 和工具 |
-| **P8** | `utils/` | 工具函数 | 无 | 独立工具函数，可随时实现 |
+| **P6** | `memory/`, `skills/`, `core/credential_pool.py` | 扩展 | P0-P4 | 存储和技能扩展组件，凭证池支持多凭证轮换 |
+| **P7** | `providers/builtins/`, `tools/builtins/`, `core/fallback.py` | 内置实现 | P1, P3, P6 | 内置 Provider 和工具，故障转移链 |
+| **P8** | `utils/`, `session/` | 工具函数 | 无 | 独立工具函数和会话管理 |
 
 ### 17.2 阶段详细说明
 
@@ -2585,7 +3694,7 @@ agentforge/
 │   ├── messages.py      # Message, ContentBlock, TextContent, ImageContent...
 │   ├── responses.py     # NormalizedResponse, ToolCall, Usage
 │   ├── tools.py         # ToolSpec, ToolResult
-│   └── errors.py        # AgentForgeError 及子类
+│   └── errors.py        # AgentForgeError 及子类，classify_api_error
 └── config/
     ├── __init__.py
     ├── settings.py      # Settings, ProviderSettings, CompressionSettings...
@@ -2595,6 +3704,7 @@ agentforge/
 **交付物**：
 - 完整的类型定义，支持类型检查
 - Pydantic 配置验证
+- 错误分类器（classify_api_error）
 - 单元测试覆盖
 
 #### P1: Provider 与 Transport（预计 3 天）
@@ -2605,11 +3715,13 @@ agentforge/
 │   ├── __init__.py
 │   ├── base.py          # Provider ABC, ProviderCapabilities
 │   ├── registry.py      # ProviderRegistry
+│   ├── profile.py       # ProviderProfile（模型元数据）
 │   └── transports/
 │       ├── __init__.py
 │       ├── base.py      # Transport ABC
 │       ├── types.py     # 内部类型（如有）
 │       ├── chat_completions.py  # ChatCompletionsTransport
+│       ├── anthropic.py # AnthropicTransport（原生 Messages API）
 │       └── adapters/
 │           ├── __init__.py
 │           ├── moonshot.py
@@ -2620,6 +3732,7 @@ agentforge/
 **交付物**：
 - Transport 抽象基类
 - ChatCompletionsTransport 完整实现
+- AnthropicTransport 原生 API 实现
 - 中国大模型适配器
 - Provider 注册机制
 - 单元测试 + Mock API 测试
@@ -2633,14 +3746,14 @@ agentforge/
 │   └── cooperative.py   # InterruptToken, InterruptHandler
 └── events/
     ├── __init__.py
-    ├── types.py         # EventType, Event
+    ├── types.py         # EventType（20+ 事件类型）
     └── emitter.py       # EventEmitter, EventDispatcher
 ```
 
 **交付物**：
 - 线程安全的中断令牌
 - 父子链式中断传播
-- 事件分发系统
+- 事件分发系统（支持 20+ 事件类型）
 - 单元测试
 
 #### P3: 工具系统（预计 3 天）
@@ -2652,7 +3765,9 @@ agentforge/
     ├── base.py          # Tool ABC, FunctionTool
     ├── executor.py      # ToolExecutor, ToolExecutionContext
     ├── approval.py      # ApprovalCallback, ApprovalDecision
-    └── toolsets.py      # Toolset 定义
+    ├── guardrails.py    # 工具护栏（安全策略）
+    ├── checkpoint.py    # 工具执行检查点
+    └── toolsets.py      # ToolsetDefinition, ToolsetRegistry
 ```
 
 **交付物**：
@@ -2660,98 +3775,133 @@ agentforge/
 - 函数装饰器 `@tool`
 - 并发执行器（ThreadPoolExecutor + ContextVars）
 - 审批系统
+- 工具护栏（安全策略验证）
+- 工具集定义（check_fn, requires_env）
 - 单元测试
 
 #### P4: Agent 核心与上下文压缩（预计 4 天）
 
 ```
 agentforge/
-├── agent.py             # Agent 门面类
+├── agent.py             # Agent 门面类（活动追踪、速率限制状态）
 ├── managers/
 │   ├── __init__.py
 │   ├── message.py       # MessageManager
 │   └── tool_orchestrator.py  # ToolOrchestrator
-└── context/
+├── context/
+│   ├── __init__.py
+│   ├── compressor.py    # ContextCompressor
+│   ├── estimator.py     # TokenEstimator
+│   ├── protection.py    # 保护区域计算
+│   └── prompt_caching.py # 提示缓存策略
+└── core/
     ├── __init__.py
-    ├── compressor.py    # ContextCompressor
-    ├── estimator.py     # TokenEstimator
-    └── protection.py    # 保护区域计算
+    ├── iteration_budget.py  # IterationBudget
+    └── retry.py             # RetryPolicy, jittered_backoff
 ```
 
 **交付物**：
-- Agent 门面类
+- Agent 门面类（含活动追踪 `_last_activity_ts`）
 - MessageManager 消息管理
 - ToolOrchestrator 工具编排
 - ContextCompressor 压缩策略
+- IterationBudget 迭代预算控制
+- 重试策略（指数退避 + 抖动）
 - 集成测试
 
-#### P5: 委托系统（预计 3 天）
+#### P5: 托托系统（预计 3 天）
 
 ```
 agentforge/
 └── delegation/
     ├── __init__.py
     ├── config.py        # DelegationConfig, IsolationConfig
-    ├── manager.py       # DelegationManager
+    ├── manager.py       # DelegationManager（心跳检查、超时处理）
     ├── result.py        # DelegationResult, DelegationStrategy
     └── approval.py      # ChildAgentApprovalCallback
 ```
 
 **交付物**：
 - 委托配置与隔离边界
-- DelegationManager 完整实现
+- DelegationManager 完整实现（含心跳检查）
 - 失败处理与重试
 - 单元测试 + 集成测试
 
-#### P6: 存储与技能（预计 2 天）
+#### P6: 存储与技能（预计 3 天）
 
 ```
 agentforge/
 ├── memory/
 │   ├── __init__.py
 │   ├── base.py          # MemoryProvider ABC
+│   ├── manager.py       # MemoryManager（上下文清理）
+│   ├── scrubber.py      # StreamingContextScrubber
 │   └── builtins/
 │       ├── __init__.py
 │       ├── in_memory.py
 │       └── file_based.py
-└── skills/
-    ├── __init__.py
-    ├── base.py          # Skill ABC
-    ├── loader.py        # Skill 加载器
-    └── registry.py      # SkillRegistry
+├── skills/
+│   ├── __init__.py
+│   ├── base.py          # Skill ABC, SkillMetadata
+│   ├── loader.py        # SkillLoader, SkillPackage, SkillHotReloader
+│   └── registry.py      # SkillRegistry
+└── core/
+    ├── credential_pool.py   # CredentialPool, PooledCredential
+    └── client_factory.py    # Provider 客户端工厂
 ```
 
 **交付物**：
 - MemoryProvider 抽象与内置实现
+- MemoryManager（上下文清理）
+- StreamingContextScrubber（流式上下文清理）
 - Skill 抽象与注册机制
+- SkillLoader（技能包加载）
+- CredentialPool（凭证池管理）
 - 单元测试
 
-#### P7: 内置实现（预计 3 天）
+#### P7: 内置实现（预计 4 天）
 
 ```
 agentforge/
 ├── providers/
+│   ├── client_factory.py    # resolve_provider_client
 │   └── builtins/
 │       ├── __init__.py
 │       ├── openai.py
 │       ├── anthropic.py
+│       ├── deepseek.py
+│       ├── moonshot.py
+│       ├── qwen.py
 │       └── chinese/
 │           ├── __init__.py
 │           ├── moonshot.py
 │           ├── qwen.py
 │           └── deepseek.py
-└── tools/
-    └── builtins/
-        ├── __init__.py
-        ├── delegate.py
-        ├── shell.py
-        └── ...
+├── tools/
+│   └── builtins/
+│       ├── __init__.py
+│       ├── delegate.py      # DelegateTool
+│       ├── shell.py         # ShellTool
+│       └── ...
+├── session/
+│   ├── __init__.py
+│   ├── base.py              # SessionProvider ABC
+│   ├── info.py              # SessionInfo, MessageRecord
+│   └── builtins/
+│       ├── __init__.py
+│       └── in_memory.py     # InMemorySessionProvider
+└── core/
+    ├── fallback.py          # FallbackProvider, FallbackChain
+    └── model_metadata.py    # ModelCapabilities, DefaultModelMetadataProvider
 ```
 
 **交付物**：
 - OpenAI/Anthropic Provider
-- 中国大模型 Provider
+- 中国大模型 Provider（Moonshot、Qwen、DeepSeek）
 - 内置工具（delegate, shell 等）
+- SessionProvider（会话持久化、压缩链追踪）
+- FallbackChain（Provider 故障转移）
+- ModelCapabilities（模型元数据）
 - 集成测试
 
 #### P8: 工具函数（预计 1 天）
@@ -2761,12 +3911,16 @@ agentforge/
 └── utils/
     ├── __init__.py
     ├── platform.py      # 跨平台兼容
-    └── logging.py       # 日志配置
+    ├── logging.py       # 日志配置、敏感信息脱敏
+    ├── model_metadata.py # fetch_model_metadata, estimate_tokens_rough
+    └── schema_sanitizer.py # JSON Schema 清理
 ```
 
 **交付物**：
 - 平台检测与兼容
-- 日志配置
+- 日志配置（结构化日志）
+- 模型元数据获取
+- JSON Schema 清理（移除不支持的字段）
 - 文档完善
 
 ### 17.3 测试策略
