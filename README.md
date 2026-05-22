@@ -555,6 +555,149 @@ agent.sync()
             等待下一轮对话...
 ```
 
+## 会话持久化
+
+AgentForge 提供独立的会话管理模块，支持会话持久化和历史查询。
+
+### SessionProvider
+
+`SessionProvider` 是会话存储的抽象基类，提供完整的会话生命周期管理：
+
+```python
+from agentforge import InMemorySessionProvider
+
+# 创建会话提供者
+provider = InMemorySessionProvider()
+
+# 创建新会话
+session_id = provider.create_session(
+    session_id="session-001",
+    source="cli",
+    model="gpt-4",
+    system_prompt="你是一个助手",
+)
+
+# 追加消息
+provider.append_message(session_id, "user", "你好")
+provider.append_message(session_id, "assistant", "你好！有什么可以帮你的？")
+
+# 获取会话消息
+messages = provider.get_messages(session_id)
+for msg in messages:
+    print(f"{msg.role}: {msg.content}")
+
+# 设置会话标题
+provider.set_session_title(session_id, "初次对话")
+
+# 结束会话
+provider.end_session(session_id, end_reason="completed")
+```
+
+### 会话信息
+
+```python
+from agentforge import SessionInfo, MessageRecord
+
+# 会话信息
+session = provider.get_session("session-001")
+print(f"会话 ID: {session.id}")
+print(f"来源: {session.source}")
+print(f"模型: {session.model}")
+print(f"消息数: {session.message_count}")
+print(f"开始时间: {session.started_at}")
+```
+
+### 会话搜索
+
+```python
+# 搜索消息
+results = provider.search_messages("你好", limit=10)
+
+# 列出所有会话
+sessions = provider.list_sessions(source="cli", limit=20)
+
+# 通过标题查找会话
+session = provider.get_session_by_title("初次对话")
+```
+
+### 压缩链追踪
+
+当上下文压缩发生时，可以追踪压缩链：
+
+```python
+# 获取压缩链末端的会话
+latest_id = provider.get_compression_tip("session-001")
+
+# 获取会话血统（从根到当前）
+lineage = provider.get_session_lineage("session-001")
+```
+
+### 自定义 SessionProvider
+
+实现自定义的持久化存储：
+
+```python
+from agentforge import SessionProvider, SessionInfo, MessageRecord
+
+class DatabaseSessionProvider(SessionProvider):
+    """数据库会话提供者示例。"""
+
+    def __init__(self, db_connection):
+        self.db = db_connection
+
+    def create_session(self, session_id: str, source: str, **kwargs) -> str:
+        self.db.execute(
+            "INSERT INTO sessions (id, source, ...) VALUES (?, ?, ...)",
+            (session_id, source, ...)
+        )
+        return session_id
+
+    def get_session(self, session_id: str) -> SessionInfo | None:
+        row = self.db.execute(
+            "SELECT * FROM sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+        if row:
+            return SessionInfo.from_dict(row)
+        return None
+
+    # 实现其他抽象方法...
+```
+
+### 与 Agent 集成
+
+> **注意**：当前版本 SessionProvider 是独立模块，需要手动管理会话和消息同步。未来版本将提供与 Agent 的自动集成。
+
+手动集成示例：
+
+```python
+from agentforge import Agent, InMemorySessionProvider
+
+session_provider = InMemorySessionProvider()
+agent = Agent(model="gpt-4")
+
+# 创建会话
+session_id = session_provider.create_session(
+    session_id="chat-001",
+    source="cli",
+)
+
+# 运行对话
+user_msg = "你好"
+session_provider.append_message(session_id, "user", user_msg)
+response = agent.run(user_msg)
+session_provider.append_message(session_id, "assistant", response.content)
+
+# 恢复会话历史
+messages = session_provider.get_messages(session_id)
+for msg in messages:
+    if msg.role == "user":
+        agent._message_manager.add_user_message(msg.content)
+    elif msg.role == "assistant":
+        # 需要构建 NormalizedResponse
+        pass
+```
+
 ## 测试
 
 ```bash
