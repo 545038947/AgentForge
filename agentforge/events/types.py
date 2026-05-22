@@ -62,6 +62,11 @@ class EventType(enum.Enum):
     MEMORY_SYNC = "memory.sync"
     MEMORY_SYNC_DONE = "memory.sync_done"
 
+    # Profile 系统
+    PROFILE_LOADED = "profile.loaded"
+    PROFILE_INVALID = "profile.invalid"
+    PROFILE_RELOADED = "profile.reloaded"
+
 
 @dataclass
 class Event:
