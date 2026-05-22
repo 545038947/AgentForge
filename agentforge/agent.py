@@ -29,6 +29,7 @@ from agentforge.context import ContextCompressor
 from agentforge.tools import Tool, FunctionTool, ApprovalCallback
 from agentforge.tools.guardrails import ToolCallGuardrailController
 from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta
+from agentforge.types.messages import TextContent, ImageContent, ToolUseContent
 from agentforge.core import (
     IterationBudget,
     FallbackChain,
@@ -102,6 +103,8 @@ class Agent:
         fallback_chain: Optional[FallbackChain] = None,
         memory_manager: Optional["MemoryManager"] = None,
         skill_registry: Optional["SkillRegistry"] = None,
+        session_provider: Optional["SessionProvider"] = None,
+        session_id: Optional[str] = None,
     ):
         """初始化 Agent。
 
@@ -123,6 +126,8 @@ class Agent:
             fallback_chain: 回退链（可选）
             memory_manager: 记忆管理器（可选）
             skill_registry: 技能注册表（可选）
+            session_provider: 会话提供者（可选，用于持久化）
+            session_id: 会话 ID（可选，用于恢复会话）
         """
         # 自动选择 Provider
         if provider is None:
@@ -166,6 +171,29 @@ class Agent:
                 event_dispatcher=self._event_dispatcher,
             )
 
+        # 会话提供者
+        self._session_provider = session_provider
+        self._session_id = session_id
+
+        # 如果提供了会话 ID 但没有 session_provider，创建默认的内存提供者
+        if session_id and not session_provider:
+            from agentforge.session import InMemorySessionProvider
+            self._session_provider = InMemorySessionProvider()
+
+        # 如果有会话 ID，创建或恢复会话
+        if self._session_id and self._session_provider:
+            existing = self._session_provider.get_session(self._session_id)
+            if existing is None:
+                # 创建新会话
+                self._session_provider.create_session(
+                    session_id=self._session_id,
+                    source="agentforge",
+                    model=model or getattr(provider, "_model", "unknown"),
+                )
+            else:
+                # 恢复会话历史
+                self._restore_session_history()
+
         # 技能注册表
         self._skill_registry = skill_registry
         if skill_registry is None:
@@ -205,6 +233,111 @@ class Agent:
         self._last_activity_desc: str = "初始化"
         self._rate_limit_state: Optional[Dict[str, Any]] = None
         self._api_call_count: int = 0
+
+    def _restore_session_history(self) -> None:
+        """从 SessionProvider 恢复会话历史。"""
+        if not self._session_provider or not self._session_id:
+            return
+
+        messages = self._session_provider.get_messages(self._session_id)
+        for msg in messages:
+            if msg.role == "user":
+                # 用户消息
+                if isinstance(msg.content, str):
+                    self._message_manager.add_user_message(msg.content)
+                elif isinstance(msg.content, list):
+                    # 多模态内容
+                    content_blocks = []
+                    for item in msg.content:
+                        if item.get("type") == "text":
+                            content_blocks.append(TextContent(text=item.get("text", "")))
+                        elif item.get("type") == "image_url":
+                            content_blocks.append(ImageContent(
+                                url=item.get("image_url", {}).get("url", ""),
+                            ))
+                    if content_blocks:
+                        self._message_manager.add_message(Message(role="user", content=content_blocks))
+            elif msg.role == "assistant":
+                # Assistant 消息
+                content = []
+                if isinstance(msg.content, str) and msg.content:
+                    content.append(TextContent(text=msg.content))
+                if msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        content.append(ToolUseContent(
+                            id=tc.get("id", ""),
+                            name=tc.get("function", {}).get("name", ""),
+                            input=tc.get("function", {}).get("arguments", {}),
+                        ))
+                if content:
+                    self._message_manager.add_message(Message(role="assistant", content=content))
+
+    def _sync_to_session(self, role: str, content: Any, **kwargs) -> None:
+        """同步消息到 SessionProvider。"""
+        # 使用 getattr 安全访问，因为某些测试可能绕过 __init__
+        session_provider = getattr(self, "_session_provider", None)
+        session_id = getattr(self, "_session_id", None)
+        if not session_provider or not session_id:
+            return
+
+        try:
+            session_provider.append_message(
+                session_id=session_id,
+                role=role,
+                content=content,
+                **kwargs,
+            )
+        except Exception as e:
+            logger.warning(f"同步消息到会话失败: {e}")
+
+    def _sync_assistant_message(self, response: NormalizedResponse) -> None:
+        """同步 assistant 消息到 SessionProvider。"""
+        # 使用 getattr 安全访问，因为某些测试可能绕过 __init__
+        session_provider = getattr(self, "_session_provider", None)
+        session_id = getattr(self, "_session_id", None)
+        if not session_provider or not session_id:
+            return
+
+        try:
+            # 构建工具调用数据
+            tool_calls_data = None
+            if response.tool_calls:
+                tool_calls_data = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.name,
+                            "arguments": tc.arguments,
+                        },
+                    }
+                    for tc in response.tool_calls
+                ]
+
+            session_provider.append_message(
+                session_id=session_id,
+                role="assistant",
+                content=response.content or "",
+                tool_calls=tool_calls_data,
+            )
+        except Exception as e:
+            logger.warning(f"同步 assistant 消息到会话失败: {e}")
+
+    def get_session_id(self) -> Optional[str]:
+        """获取当前会话 ID。"""
+        return self._session_id
+
+    def get_session_info(self) -> Optional[Any]:
+        """获取当前会话信息。"""
+        if not self._session_provider or not self._session_id:
+            return None
+        return self._session_provider.get_session(self._session_id)
+
+    def set_session_title(self, title: str) -> bool:
+        """设置当前会话标题。"""
+        if not self._session_provider or not self._session_id:
+            return False
+        return self._session_provider.set_session_title(self._session_id, title)
 
     def add_tool(self, tool: Union[Tool, Callable]) -> Tool:
         """添加工具。
@@ -511,8 +644,10 @@ class Agent:
         # 添加用户消息
         if isinstance(message, str):
             self._message_manager.add_user_message(message)
+            self._sync_to_session("user", message)
         else:
             self._message_manager.add_message(message)
+            self._sync_to_session("user", message.content if hasattr(message, 'content') else str(message))
 
         # 发射开始事件
         self._event_dispatcher.dispatch(EventType.AGENT_START, {})
@@ -588,6 +723,8 @@ class Agent:
             if response.tool_calls:
                 # 添加 assistant 消息
                 self._message_manager.add_assistant_message(response)
+                # 同步 assistant 消息到会话
+                self._sync_assistant_message(response)
 
                 # 执行工具
                 self._event_dispatcher.dispatch(
@@ -631,6 +768,8 @@ class Agent:
 
             # 无工具调用，返回最终响应
             self._message_manager.add_assistant_message(response)
+            # 同步 assistant 消息到会话
+            self._sync_assistant_message(response)
 
             self._event_dispatcher.dispatch(EventType.AGENT_END, {})
             return response
@@ -671,8 +810,10 @@ class Agent:
         # 添加用户消息
         if isinstance(message, str):
             self._message_manager.add_user_message(message)
+            self._sync_to_session("user", message)
         else:
             self._message_manager.add_message(message)
+            self._sync_to_session("user", message.content if hasattr(message, 'content') else str(message))
 
         # 发射开始事件
         self._event_dispatcher.dispatch(EventType.AGENT_START, {})
@@ -740,6 +881,8 @@ class Agent:
             if final_response.tool_calls:
                 # 添加 assistant 消息
                 self._message_manager.add_assistant_message(final_response)
+                # 同步 assistant 消息到会话
+                self._sync_assistant_message(final_response)
 
                 # 执行工具
                 self._event_dispatcher.dispatch(
@@ -767,6 +910,8 @@ class Agent:
 
             # 无工具调用，返回最终响应
             self._message_manager.add_assistant_message(final_response)
+            # 同步 assistant 消息到会话
+            self._sync_assistant_message(final_response)
             self._event_dispatcher.dispatch(EventType.AGENT_END, {})
             break
 
@@ -804,8 +949,10 @@ class Agent:
         # 添加用户消息
         if isinstance(message, str):
             self._message_manager.add_user_message(message)
+            self._sync_to_session("user", message)
         else:
             self._message_manager.add_message(message)
+            self._sync_to_session("user", message.content if hasattr(message, 'content') else str(message))
 
         # 发射开始事件
         self._event_dispatcher.dispatch(EventType.AGENT_START, {})
@@ -921,6 +1068,8 @@ class Agent:
 
                 # 添加 assistant 消息
                 self._message_manager.add_assistant_message(final_response)
+                # 同步 assistant 消息到会话
+                self._sync_assistant_message(final_response)
 
                 # 发射工具调用生成事件
                 tool_calls = final_response.tool_calls
@@ -973,6 +1122,8 @@ class Agent:
             final_response = accumulator.build_response()
 
             self._message_manager.add_assistant_message(final_response)
+            # 同步 assistant 消息到会话
+            self._sync_assistant_message(final_response)
 
             # 发射最终增量
             yield StreamDelta(
