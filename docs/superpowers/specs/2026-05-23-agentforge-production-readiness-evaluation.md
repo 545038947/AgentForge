@@ -462,12 +462,12 @@ class AgentWorker:
 | 维度 | 评分 | 说明 |
 |------|------|------|
 | 核心功能 | 8/10 | Provider、Tools、Memory 功能完善 |
-| 稳定性 | 8/10 | MCP 已有 191 个测试、Mock 降级已修复、裸异常已缩窄 |
-| 性能 | 6/10 | MCP 连接开销大、HTTP 无连接池、并发无锁保护 |
+| 稳定性 | 9/10 | MCP 191 测试、Mock 降级修复、裸异常缩窄、线程锁保护、shutdown 清理 |
+| 性能 | 6/10 | MCP 连接开销大、HTTP 无连接池 |
 | 可观测性 | 7/10 | 敏感过滤+结构化日志已实现，指标导出待做 |
-| 测试覆盖 | 7/10 | MCP 191 测试已覆盖，CheckpointManager 待补充 |
+| 测试覆盖 | 8/10 | MCP 191 测试+Checkpoint 58 测试，P2 模块待补充 |
 
-**总体评估：✅ P0 全部完成，建议完成 P1 后上线**
+**总体评估：✅ P0+P1 核心项完成，可用于生产环境**
 
 ---
 
@@ -480,9 +480,9 @@ class AgentWorker:
 | 1 | MCP 模块零测试覆盖 | MCP 工具调用失败无法提前发现 | ✅ 已修复：191 个测试 |
 | 2 | Mock 响应静默降级 | Provider 连接失败时返回硬编码假响应 | ✅ 已修复：改为抛 ProviderError |
 | 3 | 79 处裸 `except Exception:` | 吞掉所有异常，掩盖真实错误 | ✅ 已修复：全部缩窄 |
-| 4 | Agent 共享状态无锁 | 并发修改消息历史/执行状态可能导致数据损坏 | ⚠️ 待修（P1） |
-| 5 | MemoryManager 缺少 shutdown | 进程退出时内存/文件资源不释放 | ⚠️ 待修（P1） |
-| 6 | async 上下文用 threading.Lock | 在 asyncio 中可能死锁 | ⚠️ 待修（P1） |
+| 4 | Agent 共享状态无锁 | 并发修改消息历史/执行状态可能导致数据损坏 | ✅ 已修复：添加线程锁 |
+| 5 | MemoryManager 缺少 shutdown | 进程退出时内存/文件资源不释放 | ✅ 已修复：添加 shutdown 方法 |
+| 6 | async 上下文用 threading.Lock | 在 asyncio 中可能死锁 | ✅ 已修复：双锁策略 |
 
 **中风险（影响可靠性）：**
 
@@ -511,12 +511,12 @@ class AgentWorker:
 **P1 - 上线后尽快完成：**
 
 1. [x] 实现结构化日志（JSON 格式）→ `JsonFormatter` 已实现
-2. [ ] 添加 CheckpointManager 测试 — 1400+ 行代码无测试
-3. [ ] 为 MemoryManager/MemoryStore/FileBasedSessionProvider 添加 shutdown 方法
+2. [x] 添加 CheckpointManager 测试 — 58 个测试用例已覆盖
+3. [x] 为 MemoryManager/MemoryStore/FileBasedSessionProvider 添加 shutdown 方法
 4. [ ] 优化 MCP 工具连接复用 — 当前每次调用创建新连接
 5. [ ] 添加 Prometheus 指标导出
-6. [ ] 修复 Agent 类并发安全问题 — 共享状态无线程锁保护
-7. [ ] 替换 async 上下文中的 `threading.Lock` 为 `asyncio.Lock`
+6. [x] 修复 Agent 类并发安全问题 — MessageManager/ExecutionState 添加线程锁
+7. [x] 替换 async 上下文中的 `threading.Lock` 为 `asyncio.Lock` — ToolExecutor 双锁策略
 
 **P2 - 中期改进：**
 
