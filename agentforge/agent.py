@@ -677,19 +677,19 @@ class Agent:
             response = agent.run("使用工具帮我完成任务")
         """
         from agentforge.mcp import MCPManager
+        import asyncio
 
         if not hasattr(self, "_mcp_manager") or self._mcp_manager is None:
             self._mcp_manager = MCPManager()
 
-        # 同步初始化 MCP Servers（需要异步运行）
-        import asyncio
-        try:
-            loop = asyncio.get_running_loop()
-            # 已经在异步上下文中，创建任务
-            asyncio.create_task(self._mcp_manager.initialize_from_yaml(config_path))
-        except RuntimeError:
-            # 不在异步上下文中，创建新的事件循环
-            asyncio.run(self._mcp_manager.initialize_from_yaml(config_path))
+        # 使用线程池执行异步初始化，避免事件循环冲突
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(
+                asyncio.run,
+                self._mcp_manager.initialize_from_yaml(config_path)
+            )
+            future.result(timeout=60)  # 等待完成，最多 60 秒
 
         # 注册所有 MCP 工具到 Agent
         for tool in self._mcp_manager.get_all_tools():
@@ -714,16 +714,19 @@ class Agent:
             })
         """
         from agentforge.mcp import MCPManager
+        import asyncio
 
         if not hasattr(self, "_mcp_manager") or self._mcp_manager is None:
             self._mcp_manager = MCPManager()
 
-        import asyncio
-        try:
-            loop = asyncio.get_running_loop()
-            asyncio.create_task(self._mcp_manager.initialize_from_dict(config_data))
-        except RuntimeError:
-            asyncio.run(self._mcp_manager.initialize_from_dict(config_data))
+        # 使用线程池执行异步初始化，避免事件循环冲突
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(
+                asyncio.run,
+                self._mcp_manager.initialize_from_dict(config_data)
+            )
+            future.result(timeout=60)
 
         for tool in self._mcp_manager.get_all_tools():
             self.add_tool(tool)
@@ -1386,11 +1389,13 @@ class Agent:
         if hasattr(self, "_mcp_manager") and self._mcp_manager:
             try:
                 import asyncio
-                try:
-                    loop = asyncio.get_running_loop()
-                    asyncio.create_task(self._mcp_manager.shutdown())
-                except RuntimeError:
-                    asyncio.run(self._mcp_manager.shutdown())
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        self._mcp_manager.shutdown()
+                    )
+                    future.result(timeout=10)
             except Exception as e:
                 logger.warning(f"关闭 MCP Servers 失败: {e}")
 

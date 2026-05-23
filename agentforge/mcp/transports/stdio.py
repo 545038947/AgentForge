@@ -129,26 +129,32 @@ class StdioTransport(MCPTransport):
 
     async def close(self) -> None:
         """关闭连接并终止进程。"""
-        if self._writer:
-            self._writer.close()
-            try:
-                await self._writer.wait_closed()
-            except Exception:
-                pass
-
-        if self._process:
-            try:
-                self._process.terminate()
-                await asyncio.wait_for(self._process.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
-                self._process.kill()
-                await self._process.wait()
-            except Exception:
-                pass
-
-        self._process = None
-        self._reader = None
+        # 先清理引用，防止其他地方访问
+        writer = self._writer
+        process = self._process
         self._writer = None
+        self._reader = None
+        self._process = None
+
+        if writer:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+        if process:
+            try:
+                process.terminate()
+                await asyncio.wait_for(process.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                try:
+                    process.kill()
+                    await process.wait()
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
     def is_connected(self) -> bool:
         """检查是否已连接。"""

@@ -1,34 +1,21 @@
-# MCP Server 配置示例
+# MCP Server 配置
 # 参考: https://modelcontextprotocol.io
 
 servers:
-  # Stdio Transport 示例
-  # 通过进程 stdin/stdout 与 MCP Server 通信
-  example-stdio:
+  # Bing 中文搜索 MCP Server
+  bing-search:
     transport: stdio
-    command: python
+    command: cmd
     args:
-      - "-m"
-      - "example_mcp_server"
-    env:
-      PYTHONPATH: "/path/to/mcp/server"
+      - "/c"
+      - "npx"
+      - "-y"
+      - "bing-cn-mcp"
     enabled: true
 
-  # HTTP Transport 示例
-  # 通过 HTTP/SSE 与远程 MCP Server 通信
-  example-http:
-    transport: http
-    url: https://api.example.com/mcp
-    api_key: ${EXAMPLE_API_KEY}  # 从环境变量读取
-    headers:
-      X-Custom-Header: custom-value
-    enabled: true
-
-  # 禁用的 Server 示例
-  disabled-server:
-    transport: stdio
-    command: python
-    args:
-      - "-m"
-      - "disabled_server"
-    enabled: false  # 不会连接
+  # HTTP Transport 示例（需要服务器可用）
+  # example-http:
+  #   transport: http
+  #   url: https://mcp.hai168.xyz/sse
+  #   api_key: ${EXAMPLE_API_KEY}
+  #   enabled: true
