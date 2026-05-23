@@ -475,21 +475,31 @@ class AgentWorker:
 
 **P0 - 上线前必须完成：**
 
-1. [ ] 添加日志敏感信息过滤
-2. [ ] 验证多并发场景稳定性
-3. [ ] 添加 atexit 钩子确保资源清理
+1. [x] 添加日志敏感信息过滤 → `SensitiveDataFilter` 已实现
+2. [x] 验证多并发场景稳定性 → `test_concurrent.py` 已通过
+3. [x] 添加 atexit 钩子确保资源清理 → Agent `register_atexit` 已实现
+4. [ ] **MCP 模块测试覆盖** — 11 个文件、0 个测试，最高风险区域
+5. [ ] **消除 Mock 响应静默降级** — 所有 Builtins Provider 在连接失败时返回硬编码响应而非抛异常
+6. [ ] **修复 19 处裸 `except Exception:`** — 吞掉所有异常，掩盖真实错误
 
 **P1 - 上线后尽快完成：**
 
-1. [ ] 实现结构化日志（JSON 格式）
-2. [ ] 添加 Prometheus 指标导出
-3. [ ] 优化 MCP 工具连接复用
+1. [x] 实现结构化日志（JSON 格式）→ `JsonFormatter` 已实现
+2. [ ] 添加 CheckpointManager 测试 — 1400+ 行代码无测试
+3. [ ] 为 MemoryManager/MemoryStore/FileBasedSessionProvider 添加 shutdown 方法
+4. [ ] 优化 MCP 工具连接复用 — 当前每次调用创建新连接
+5. [ ] 添加 Prometheus 指标导出
+6. [ ] 修复 Agent 类并发安全问题 — 共享状态无线程锁保护
+7. [ ] 替换 async 上下文中的 `threading.Lock` 为 `asyncio.Lock`
 
 **P2 - 中期改进：**
 
 1. [ ] 实现数据库存储后端（Redis/PostgreSQL）
 2. [ ] 添加健康检查接口
 3. [ ] 完善错误重试策略
+4. [ ] 为流式传输添加超时控制
+5. [ ] 为 Provider 添加速率限制器
+6. [ ] MemoryStore 文件写入加锁
 
 ---
 
