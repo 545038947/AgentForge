@@ -59,31 +59,21 @@ def main():
     agent1.enable_memory_store(str(memory_dir))
     print("✅ 已启用记忆存储")
 
-    # 启用自动记忆提取
-    agent1._memory_manager.enable_auto_extraction()
-    print("✅ 已启用自动记忆提取")
+    # 获取记忆工具并添加到 Agent
+    memory_tools = agent1.get_memory_tools()
+    agent1.add_tools(memory_tools)
+    print(f"✅ 已添加 {len(memory_tools)} 个记忆工具: save_memory, query_memory")
 
     # 预取记忆（首次为空）
     agent1.prefetch()
 
-    # 对话，存储用户信息
+    # 对话，LLM 会通过工具主动记录重要信息
     print("\n--- 对话 1 ---")
     prompt1 = "请记住：我叫张三，我是一名 Python 开发者，我喜欢使用 FastAPI 框架。"
     print(f"用户: {prompt1}")
 
     response1 = agent1.run(prompt1)
     print(f"Agent: {response1.content}")
-
-    # 提取并存储记忆（从对话中自动提取）
-    memories = agent1._memory_manager.extract_and_store(
-        user_message=prompt1,
-        assistant_response=response1.content,
-        sync=True,
-    )
-    if memories:
-        print(f"📝 提取了 {len(memories)} 条记忆")
-        for m in memories:
-            print(f"   - {m.content[:50]}...")
 
     # 同步记忆到存储
     agent1.sync()
@@ -107,6 +97,11 @@ def main():
     # 启用记忆存储
     agent2.enable_memory_store(str(memory_dir))
     print("✅ 已启用记忆存储")
+
+    # 获取记忆工具并添加到 Agent
+    memory_tools = agent2.get_memory_tools()
+    agent2.add_tools(memory_tools)
+    print(f"✅ 已添加 {len(memory_tools)} 个记忆工具")
 
     # 预取记忆（恢复之前的记忆）
     agent2.prefetch()

@@ -373,6 +373,17 @@ class Agent:
         self._tools[tool.name] = tool
         return tool
 
+    def add_tools(self, tools: List[Union[Tool, Callable]]) -> List[Tool]:
+        """批量添加工具。
+
+        Args:
+            tools: 工具实例或函数列表
+
+        Returns:
+            注册的 Tool 实例列表
+        """
+        return [self.add_tool(tool) for tool in tools]
+
     def tool(self, func: Callable) -> Tool:
         """工具装饰器。
 
@@ -461,6 +472,39 @@ class Agent:
             memory_char_limit=memory_char_limit,
             user_char_limit=user_char_limit,
         )
+
+    def get_memory_tools(self) -> List["Tool"]:
+        """获取记忆工具列表。
+
+        返回可以让 LLM 主动调用以保存和查询记忆的工具。
+
+        Returns:
+            记忆工具列表 [SaveMemoryTool, QueryMemoryTool]
+
+        使用示例：
+            agent = Agent(model="gpt-4")
+            agent.enable_memory_store("./memories")
+
+            # 获取记忆工具并添加到 Agent
+            memory_tools = agent.get_memory_tools()
+            agent.add_tools(memory_tools)
+
+            # 现在 LLM 可以主动保存和查询记忆了
+            agent.run("请记住我喜欢用 Python")
+        """
+        if self._memory_manager is None:
+            logger.warning("MemoryManager 未初始化")
+            return []
+
+        from agentforge.tools.builtins.memory import (
+            SaveMemoryTool,
+            QueryMemoryTool,
+        )
+
+        return [
+            SaveMemoryTool(self._memory_manager),
+            QueryMemoryTool(self._memory_manager),
+        ]
 
     def add_memory_entry(
         self,
