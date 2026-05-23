@@ -231,15 +231,28 @@ class MessageManager:
     def get_context(self) -> List[Message]:
         """获取当前上下文（可能压缩）。
 
+        包含系统提示（如果有）和消息历史。
+
         Returns:
-            消息列表
+            消息列表，系统提示作为第一条消息（role="system"）
         """
         if self._compressor:
             # 检查是否需要压缩
             if self._compressor.should_compress(self._messages):
                 self._messages = self._compressor.compress(self._messages)
 
-        return self._messages.copy()
+        messages = self._messages.copy()
+
+        # 添加系统提示作为第一条消息
+        system_prompt = self.get_system_prompt()
+        if system_prompt:
+            system_message = Message(
+                role="system",
+                content=[TextContent(text=system_prompt)],
+            )
+            messages.insert(0, system_message)
+
+        return messages
 
     def clear(self) -> None:
         """清空消息历史。"""
