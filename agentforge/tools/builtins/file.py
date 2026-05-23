@@ -95,7 +95,7 @@ class FileReadTool(Tool):
                 content=content,
             )
 
-        except Exception as e:
+        except (OSError, FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
             logger.error(f"文件读取错误: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,
@@ -195,7 +195,7 @@ class FileWriteTool(Tool):
                 content=f"文件{action}成功: {path}",
             )
 
-        except Exception as e:
+        except (OSError, PermissionError, FileNotFoundError) as e:
             logger.error(f"文件写入错误: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,

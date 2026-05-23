@@ -51,7 +51,7 @@ class ToolsetDefinition:
                 if not self.check_fn():
                     logger.debug("工具集条件检查未通过")
                     return False
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 logger.debug(f"工具集条件检查异常: {e}")
                 return False
 
@@ -149,7 +149,7 @@ class ToolsetRegistry:
             try:
                 if not definition.check_fn():
                     return f"工具集 '{name}' 的条件检查未通过"
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 return f"工具集 '{name}' 条件检查异常: {e}"
 
         return None

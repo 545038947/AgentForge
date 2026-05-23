@@ -87,7 +87,7 @@ class FileBasedProvider(MemoryProvider):
                     meta_path = self._get_meta_path(key)
                     with open(meta_path, "w", encoding="utf-8") as f:
                         json.dump(metadata, f, ensure_ascii=False, indent=2)
-            except Exception as e:
+            except (OSError, PermissionError, TypeError) as e:
                 logger.error(f"保存数据失败: {e}")
                 raise
 
@@ -109,7 +109,7 @@ class FileBasedProvider(MemoryProvider):
                 with open(file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     return data.get("value")
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, ValueError) as e:
                 logger.error(f"加载数据失败: {e}")
                 return None
 
@@ -191,6 +191,6 @@ class FileBasedProvider(MemoryProvider):
             try:
                 with open(meta_path, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, ValueError) as e:
                 logger.error(f"加载元数据失败: {e}")
                 return None

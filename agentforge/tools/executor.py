@@ -204,7 +204,7 @@ class ToolExecutor:
             execution.result = result
             return result
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, TimeoutError) as e:
             execution.error = str(e)
             logger.error(f"工具执行错误 [{tool.name}]: {e}")
 
@@ -261,7 +261,7 @@ class ToolExecutor:
         def _run():
             try:
                 result_container["result"] = tool.execute(tool_call_id, **kwargs)
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 result_container["error"] = e
             finally:
                 event.set()
@@ -328,7 +328,7 @@ class ToolExecutor:
                     content="工具执行超时",
                     is_error=True,
                 ))
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 results.append(ToolResult(
                     tool_call_id="",
                     content=f"工具执行错误: {e}",

@@ -141,7 +141,7 @@ class DelegateTool(Tool):
                     is_error=True,
                 )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"委托执行错误: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,

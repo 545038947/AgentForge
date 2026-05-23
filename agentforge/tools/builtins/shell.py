@@ -161,7 +161,7 @@ class ShellTool(Tool):
                 is_error=True,
             )
 
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, PermissionError) as e:
             logger.error(f"命令执行错误: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,

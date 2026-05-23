@@ -110,7 +110,7 @@ class SaveMemoryTool(Tool):
                     is_error=True,
                 )
 
-        except Exception as e:
+        except (OSError, IOError, ValueError) as e:
             logger.error(f"保存记忆失败: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,
@@ -229,7 +229,7 @@ class QueryMemoryTool(Tool):
                 content="已保存的记忆：\n" + "\n".join(f"- {r}" for r in results),
             )
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"查询记忆失败: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,

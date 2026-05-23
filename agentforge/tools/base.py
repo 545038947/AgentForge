@@ -198,7 +198,7 @@ class FunctionTool(Tool):
                     tool_call_id=tool_call_id,
                     content=str(result),
                 )
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             return ToolResult(
                 tool_call_id=tool_call_id,
                 content=f"工具执行错误: {e}",

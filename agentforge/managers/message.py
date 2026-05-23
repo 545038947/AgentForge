@@ -146,7 +146,7 @@ class MessageManager:
         if self._memory:
             try:
                 self._memory.save(f"msg_{len(self._messages)}", message)
-            except Exception as e:
+            except (OSError, IOError) as e:
                 logger.warning(f"保存消息到存储失败: {e}")
 
     def add_user_message(self, content: str) -> Message:

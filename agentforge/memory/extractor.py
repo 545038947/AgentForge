@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -12,6 +13,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 
 from agentforge.memory.metadata import MemoryMetadata, MemorySource, MemoryType
+from agentforge.types.errors import ProviderError
 
 if TYPE_CHECKING:
     from agentforge.types import NormalizedResponse
@@ -230,7 +232,7 @@ class LLMExtractor(MemoryExtractor):
 
             return memories
 
-        except Exception as e:
+        except (ProviderError, json.JSONDecodeError, ValueError) as e:
             logger.error(f"LLM 记忆提取失败: {e}")
             return []
 

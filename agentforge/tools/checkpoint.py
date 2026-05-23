@@ -296,7 +296,7 @@ def _run_git(
         msg = f"工作目录不存在：{normalized_working_dir}"
         logger.error("Git 命令执行前失败：%s (%s)", " ".join(cmd), msg, exc_info=True)
         return False, "", msg
-    except Exception as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
         logger.error("运行 %s 时发生意外 git 错误：%s", " ".join(cmd), exc, exc_info=True)
         return False, "", str(exc)
 
@@ -555,7 +555,7 @@ class CheckpointManager:
 
         try:
             return self._take(abs_dir, reason)
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, FileNotFoundError) as e:
             logger.debug("Checkpoint 失败（非致命）：%s", e)
             return False
 
@@ -1383,7 +1383,7 @@ def maybe_auto_prune_checkpoints(
                 result["deleted_stale"],
                 result["bytes_freed"] / (1024 * 1024),
             )
-    except Exception as exc:
+    except (OSError, IOError, ValueError) as exc:
         logger.warning("checkpoint 自动维护失败：%s", exc)
         out["error"] = str(exc)
 

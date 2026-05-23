@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -459,7 +460,7 @@ class MemoryManager:
                 name = futures[future]
                 try:
                     results[name] = future.result(timeout=30)
-                except Exception as e:
+                except (TimeoutError, OSError) as e:
                     logger.error(f"预取 provider {name} 失败: {e}")
                     results[name] = {}
 
@@ -502,7 +503,7 @@ class MemoryManager:
                 if value is not None:
                     result[key] = value
 
-        except Exception as e:
+        except (OSError, IOError, ValueError, TimeoutError) as e:
             logger.error(f"预取 provider {name} 数据失败: {e}")
 
         return result
@@ -553,7 +554,7 @@ class MemoryManager:
                 try:
                     provider.save(key, value)
                     count += 1
-                except Exception as e:
+                except (OSError, IOError) as e:
                     logger.error(f"同步 {name}:{key} 失败: {e}")
 
             results[name] = count
@@ -580,7 +581,7 @@ class MemoryManager:
         def _background_prefetch():
             try:
                 self.prefetch_all(keys)
-            except Exception as e:
+            except (OSError, IOError, ValueError, TimeoutError) as e:
                 logger.error(f"后台预取失败: {e}")
 
         thread = threading.Thread(target=_background_prefetch, daemon=True)
@@ -649,7 +650,7 @@ class MemoryManager:
                 try:
                     tools = provider.get_tools()
                     schemas.extend(tools)
-                except Exception as e:
+                except (OSError, IOError, ValueError, TimeoutError) as e:
                     logger.error(f"从 provider {name} 收集工具失败: {e}")
 
         return schemas
@@ -691,7 +692,7 @@ class MemoryManager:
                     prompt_block = provider.build_prompt()
                     if prompt_block:
                         parts.append(f"## {name}\n{prompt_block}")
-                except Exception as e:
+                except (OSError, IOError, ValueError, TimeoutError) as e:
                     logger.error(f"构建 provider {name} 提示失败: {e}")
 
             # 从缓存中获取数据
@@ -738,7 +739,7 @@ class MemoryManager:
                         provider_name=name,
                         metadata=item.get("metadata"),
                     ))
-            except Exception as e:
+            except (OSError, IOError, ValueError, TimeoutError) as e:
                 logger.error(f"在 provider {name} 中搜索失败: {e}")
 
         # 按相关性排序（简单实现：键匹配优先）
@@ -773,7 +774,7 @@ class MemoryManager:
             provider.save(key, value, metadata)
             self.set_cached(provider_name, key, value)
             return True
-        except Exception as e:
+        except (OSError, IOError, ValueError, TimeoutError) as e:
             logger.error(f"保存到 {provider_name}:{key} 失败: {e}")
             return False
 
@@ -809,7 +810,7 @@ class MemoryManager:
             if value is not None:
                 self.set_cached(provider_name, key, value)
             return value
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError) as e:
             logger.error(f"从 {provider_name}:{key} 加载失败: {e}")
             return None
 
@@ -833,7 +834,7 @@ class MemoryManager:
             if result:
                 self.invalidate_cached(provider_name, key)
             return result
-        except Exception as e:
+        except (OSError, IOError) as e:
             logger.error(f"从 {provider_name}:{key} 删除失败: {e}")
             return False
 
@@ -842,7 +843,7 @@ class MemoryManager:
         for name, provider in self._providers.items():
             try:
                 provider.clear()
-            except Exception as e:
+            except (OSError, IOError, ValueError, TimeoutError) as e:
                 logger.error(f"清空 provider {name} 失败: {e}")
 
         with self._cache_lock:
@@ -866,7 +867,7 @@ class MemoryManager:
         if self._event_dispatcher:
             try:
                 self._event_dispatcher.dispatch(event_type, data)
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.debug(f"发射事件失败: {e}")
 
 

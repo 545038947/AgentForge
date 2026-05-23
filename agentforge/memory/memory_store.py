@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -157,7 +158,7 @@ class MemoryStore(MemoryStoreBase):
             # 使用分隔符解析条目
             entries = self._parse_entries(content)
             return entries
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError) as e:
             logger.error(f"加载记忆文件失败 {file_path}: {e}")
             return []
 
@@ -424,7 +425,7 @@ class MemoryStore(MemoryStoreBase):
         try:
             self._atomic_write(file_path, content)
             return True
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             logger.error(f"同步记忆失败 {file_path}: {e}")
             return False
 
@@ -475,7 +476,7 @@ class MemoryStore(MemoryStoreBase):
                 path.unlink()
             os.replace(tmp_path, path)
 
-        except Exception:
+        except (OSError, PermissionError, FileNotFoundError):
             # 清理临时文件
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)

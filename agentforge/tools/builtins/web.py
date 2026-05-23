@@ -90,7 +90,7 @@ class WebFetchTool(Tool):
                 content=content[:10000],  # 限制内容长度
             )
 
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, UnicodeDecodeError) as e:
             logger.error(f"网页获取错误: {e}")
             return ToolResult(
                 tool_call_id=tool_call_id,
