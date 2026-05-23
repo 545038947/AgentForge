@@ -7,8 +7,12 @@ from __future__ import annotations
 
 import importlib.metadata
 import logging
+import os
 import threading
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Type
+
+import yaml
 
 from agentforge.providers.base import Provider
 from agentforge.types.errors import ConfigurationError
@@ -232,3 +236,148 @@ def create_provider(
 ) -> Provider:
     """创建 Provider 实例。"""
     return ProviderRegistry.create(name, api_key, base_url, **kwargs)
+
+
+# ── 自定义 Provider 配置加载 ────────────────────────────────
+
+def load_custom_providers(path: Path) -> Dict[str, Provider]:
+    """从 YAML 文件加载自定义 Provider 配置。
+
+    配置格式：
+        providers:
+          my-provider:
+            api_mode: chat_completions
+            base_url: https://api.example.com/v1
+            env_vars: [MY_API_KEY]
+            supports_tools: true
+
+    Args:
+        path: 配置文件路径
+
+    Returns:
+        创建的 Provider 实例字典
+    """
+    if not path.exists():
+        logger.warning(f"自定义 Provider 配置文件不存在: {path}")
+        return {}
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except Exception as e:
+        logger.error(f"加载自定义 Provider 配置失败: {path}, 错误: {e}")
+        return {}
+
+    providers_data = data.get("providers", {})
+    created_providers: Dict[str, Provider] = {}
+
+    for provider_name, config in providers_data.items():
+        if not isinstance(config, dict):
+            continue
+
+        try:
+            provider = _create_custom_provider_from_config(provider_name, config)
+            if provider:
+                created_providers[provider_name] = provider
+                logger.info(f"已加载自定义 Provider: {provider_name}")
+        except Exception as e:
+            logger.error(f"创建自定义 Provider '{provider_name}' 失败: {e}")
+
+    return created_providers
+
+
+def _create_custom_provider_from_config(
+    name: str,
+    config: Dict[str, Any],
+) -> Optional[Provider]:
+    """从配置创建自定义 Provider。
+
+    Args:
+        name: Provider 名称
+        config: 配置字典
+
+    Returns:
+        Provider 实例
+    """
+    from agentforge.providers.custom import CustomProvider
+    from agentforge.providers.profile import ProviderProfile, register_profile
+
+    # 解析 API Key
+    api_key = config.get("api_key")
+    if api_key and isinstance(api_key, str) and api_key.startswith("${"):
+        # 环境变量引用 ${ENV_VAR}
+        env_var = api_key[2:-1]
+        api_key = os.getenv(env_var)
+
+    # 如果未配置 api_key，尝试从 env_vars 获取
+    if api_key is None:
+        env_vars = config.get("env_vars", [])
+        if isinstance(env_vars, list):
+            for env_var in env_vars:
+                api_key = os.getenv(env_var)
+                if api_key:
+                    break
+
+    # 创建 ProviderProfile 并注册
+    profile = ProviderProfile(
+        name=name,
+        api_mode=config.get("api_mode", "chat_completions"),
+        aliases=tuple(config.get("aliases", [])),
+        display_name=config.get("display_name", name),
+        description=config.get("description", ""),
+        env_vars=tuple(config.get("env_vars", [])),
+        base_url=config.get("base_url", ""),
+        default_headers=config.get("default_headers", {}),
+        supports_tools=config.get("supports_tools", True),
+        supports_streaming=config.get("supports_streaming", True),
+        supports_vision=config.get("supports_vision", False),
+        supports_caching=config.get("supports_caching", False),
+        supports_reasoning=config.get("supports_reasoning", False),
+    )
+
+    # 注册 Profile
+    register_profile(profile)
+
+    # 创建 Provider 实例
+    return CustomProvider.from_config({
+        "name": name,
+        "api_mode": config.get("api_mode", "chat_completions"),
+        "api_key": api_key,
+        "base_url": config.get("base_url"),
+        "default_headers": config.get("default_headers"),
+        "supports_tools": config.get("supports_tools", True),
+        "supports_streaming": config.get("supports_streaming", True),
+        "supports_vision": config.get("supports_vision", False),
+        "supports_caching": config.get("supports_caching", False),
+        "supports_reasoning": config.get("supports_reasoning", False),
+    })
+
+
+def create_custom_provider(
+    name: str,
+    api_mode: str = "chat_completions",
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    **kwargs,
+) -> Provider:
+    """创建自定义 Provider 的便捷函数。
+
+    Args:
+        name: Provider 名称
+        api_mode: API 模式（chat_completions/anthropic_messages）
+        api_key: API 密钥
+        base_url: API 基础 URL
+        **kwargs: 其他参数
+
+    Returns:
+        CustomProvider 实例
+    """
+    from agentforge.providers.custom import CustomProvider
+
+    return CustomProvider(
+        name=name,
+        api_mode=api_mode,
+        api_key=api_key,
+        base_url=base_url,
+        **kwargs,
+    )

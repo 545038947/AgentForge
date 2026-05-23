@@ -25,6 +25,15 @@ from agentforge.providers.profile import (
     DEEPSEEK_PROFILE,
     OLLAMA_PROFILE,
 )
+from agentforge.providers.registry import (
+    ProviderRegistry,
+    get_provider,
+    list_providers,
+    create_provider,
+    load_custom_providers,
+    create_custom_provider,
+)
+from agentforge.providers.custom import CustomProvider
 
 __all__ = [
     "Provider",
@@ -46,4 +55,11 @@ __all__ = [
     "QWEN_PROFILE",
     "DEEPSEEK_PROFILE",
     "OLLAMA_PROFILE",
+    "ProviderRegistry",
+    "get_provider",
+    "list_providers",
+    "create_provider",
+    "load_custom_providers",
+    "create_custom_provider",
+    "CustomProvider",
 ]
