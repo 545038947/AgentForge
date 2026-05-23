@@ -144,7 +144,9 @@ class MCPManager:
         if tool is None:
             raise MCPConfigError(f"Tool not found: {tool_name}")
 
-        return await tool.execute(**(arguments or {}))
+        # 直接使用 client 调用工具
+        result = await tool._client.call_tool(tool.name, arguments or {})
+        return result.content
 
     async def read_resource(self, server_name: str, uri: str) -> str:
         """

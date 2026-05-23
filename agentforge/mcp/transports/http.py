@@ -108,6 +108,31 @@ class HTTPTransport(MCPTransport):
                 raise
             raise MCPConnectionError(f"Request failed: {e}") from e
 
+    async def send_notification(
+        self, method: str, params: Dict[str, Any] = None
+    ) -> None:
+        """发送 JSON-RPC 通知（无需等待响应）。"""
+        if not self.is_connected():
+            raise MCPConnectionError("Not connected to MCP Server")
+
+        # 构建通知（无 id 字段）
+        notification = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params or {},
+        }
+
+        try:
+            # 发送 POST 请求（不等待响应）
+            await self._client.post(
+                "/mcp",
+                json=notification,
+            )
+
+        except Exception as e:
+            # 通知失败不抛出错误，只记录
+            pass
+
     async def close(self) -> None:
         """关闭 HTTP 客户端。"""
         if self._client:

@@ -81,8 +81,8 @@ class MCPClient:
             },
         )
 
-        # 发送 initialized 通知
-        await self._transport.request("notifications/initialized", {})
+        # 发送 initialized 通知（无响应）
+        await self._transport.send_notification("notifications/initialized", {})
 
     async def _load_capabilities(self) -> None:
         """加载 Server 提供的工具和资源。"""

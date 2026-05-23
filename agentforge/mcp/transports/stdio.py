@@ -104,6 +104,29 @@ class StdioTransport(MCPTransport):
                 raise
             raise MCPConnectionError(f"Request failed: {e}") from e
 
+    async def send_notification(
+        self, method: str, params: Dict[str, Any] = None
+    ) -> None:
+        """发送 JSON-RPC 通知（无需等待响应）。"""
+        if not self.is_connected():
+            raise MCPConnectionError("Not connected to MCP Server")
+
+        # 构建通知（无 id 字段）
+        notification = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params or {},
+        }
+
+        try:
+            # 发送通知（以换行符结束）
+            notification_str = json.dumps(notification) + "\n"
+            self._writer.write(notification_str.encode("utf-8"))
+            await self._writer.drain()
+
+        except Exception as e:
+            raise MCPConnectionError(f"Failed to send notification: {e}") from e
+
     async def close(self) -> None:
         """关闭连接并终止进程。"""
         if self._writer:

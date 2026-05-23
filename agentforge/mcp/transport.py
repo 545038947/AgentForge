@@ -14,7 +14,12 @@ class MCPTransport(ABC):
 
     @abstractmethod
     async def request(self, method: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        """发送 JSON-RPC 请求。"""
+        """发送 JSON-RPC 请求并等待响应。"""
+        pass
+
+    @abstractmethod
+    async def send_notification(self, method: str, params: Dict[str, Any] = None) -> None:
+        """发送 JSON-RPC 通知（无需响应）。"""
         pass
 
     @abstractmethod
