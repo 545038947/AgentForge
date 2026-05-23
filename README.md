@@ -836,14 +836,62 @@ pytest tests/ --cov=hai_agent
 ```bash
 # 克隆仓库
 git clone https://github.com/545038947/AgentForge.git
-cd agentforge
+cd AgentForge
 
 # 安装开发依赖
 pip install -e ".[dev]"
 
 # 运行测试
-pytest tests/
+python -m pytest tests/
 ```
+
+## 发布流程
+
+### 1. 准备发布
+
+```bash
+# 更新版本号（pyproject.toml 中的 version）
+
+# 运行测试验证
+python -m pytest tests/ -q
+```
+
+### 2. 构建分发包
+
+```bash
+# 安装构建工具
+pip install build twine
+
+# 构建 wheel 和源码包
+python -m build --wheel --sdist
+```
+
+生成的文件在 `dist/` 目录：
+- `hai_agent-x.x.x-py3-none-any.whl`
+- `hai_agent-x.x.x.tar.gz`
+
+### 3. 上传到 PyPI
+
+```bash
+# 上传（需要 PyPI API Token）
+twine upload --disable-progress-bar dist/* --username __token__ --password <API_TOKEN>
+```
+
+### 4. 验证发布
+
+```bash
+# 安装验证
+pip install hai-agent
+
+# 导入测试
+python -c "import hai_agent; print(hai_agent.__version__)"
+```
+
+### 注意事项
+
+- **版本号不可重复**：同一版本号只能发布一次，更新代码需发布新版本
+- **使用 API Token**：在 PyPI 账户设置中创建 API Token，用户名为 `__token__`
+- **先测试后发布**：确保测试通过后再上传
 
 ## 许可证
 
