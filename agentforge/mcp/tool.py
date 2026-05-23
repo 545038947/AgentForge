@@ -1,5 +1,8 @@
 """MCP Tool 包装器 - 将 MCP 工具转换为 AgentForge Tool。"""
 
+import asyncio
+import concurrent.futures
+import threading
 from typing import Any, Dict, Optional
 
 from agentforge.tools.base import Tool
@@ -10,7 +13,11 @@ from agentforge.mcp.types import MCPToolSchema
 
 
 class MCPTool(Tool):
-    """将 MCP 工具包装为 AgentForge Tool。"""
+    """将 MCP 工具包装为 AgentForge Tool。
+
+    由于 MCP Client 使用 asyncio subprocess，而 Agent 的工具执行可能是同步的，
+    这个类提供了在独立线程中运行异步代码的能力。
+    """
 
     def __init__(self, client: MCPClient, schema: MCPToolSchema):
         """
@@ -44,7 +51,9 @@ class MCPTool(Tool):
 
     def execute(self, tool_call_id: str, **kwargs) -> ToolResult:
         """
-        执行 MCP 工具调用（同步包装器）。
+        执行 MCP 工具调用。
+
+        使用独立线程和新的事件循环来避免与主事件循环冲突。
 
         Args:
             tool_call_id: 工具调用 ID
@@ -53,27 +62,49 @@ class MCPTool(Tool):
         Returns:
             工具执行结果
         """
-        import asyncio
-
         try:
-            # 尝试在现有事件循环中运行
-            try:
-                loop = asyncio.get_running_loop()
-                # 已在异步上下文中，创建任务
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        self._execute_async(**kwargs)
-                    )
-                    content = future.result(timeout=self.timeout)
-            except RuntimeError:
-                # 不在异步上下文中，创建新的事件循环
-                content = asyncio.run(self._execute_async(**kwargs))
+            # 在独立线程中运行，使用新的事件循环
+            result_content = None
+            result_error = None
+
+            def run_in_thread():
+                nonlocal result_content, result_error
+                try:
+                    # 创建新的事件循环
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        # 复用已有的 client 连接，但需要在新循环中重新连接
+                        # 或者直接在这里进行工具调用
+                        result_content = loop.run_until_complete(
+                            self._execute_with_new_connection(**kwargs)
+                        )
+                    finally:
+                        loop.close()
+                except Exception as e:
+                    result_error = e
+
+            thread = threading.Thread(target=run_in_thread, daemon=True)
+            thread.start()
+            thread.join(timeout=self.timeout)
+
+            if thread.is_alive():
+                return ToolResult(
+                    tool_call_id=tool_call_id,
+                    content=f"工具执行超时 ({self.timeout}s)",
+                    is_error=True,
+                )
+
+            if result_error:
+                return ToolResult(
+                    tool_call_id=tool_call_id,
+                    content=str(result_error),
+                    is_error=True,
+                )
 
             return ToolResult(
                 tool_call_id=tool_call_id,
-                content=content,
+                content=result_content,
                 is_error=False,
             )
 
@@ -84,20 +115,29 @@ class MCPTool(Tool):
                 is_error=True,
             )
 
-    async def _execute_async(self, **kwargs) -> str:
-        """异步执行 MCP 工具调用。"""
+    async def _execute_with_new_connection(self, **kwargs) -> str:
+        """在新事件循环中创建新连接并执行工具调用。"""
+        from agentforge.mcp.config import MCPServerConfig
+        from agentforge.mcp.client import MCPClient
+
+        # 获取原始配置
+        config = self._client.config
+
+        # 创建新的 client 和连接
+        new_client = MCPClient(config)
         try:
-            result = await self._client.call_tool(self.name, kwargs)
+            await new_client.connect()
+            result = await new_client.call_tool(self.name, kwargs)
 
             if result.isError:
-                raise ToolExecutionError(f"MCP tool error: {result.content}")
+                raise ToolExecutionError(
+                    f"MCP tool error: {result.content}",
+                    tool_name=self.name,
+                )
 
             return result.content
-
-        except Exception as e:
-            if isinstance(e, ToolExecutionError):
-                raise
-            raise ToolExecutionError(f"Failed to call MCP tool: {e}") from e
+        finally:
+            await new_client.disconnect()
 
     # === 辅助方法 ===
 

@@ -788,11 +788,15 @@ class ExecutionEngine:
                 # 执行工具（传递 tool_call_id 和 kwargs）
                 output = tool.execute(tc.id, **args)
 
-                result = ToolResult(
-                    tool_call_id=tc.id,
-                    content=output if isinstance(output, str) else str(output),
-                    is_error=False,
-                )
+                # 处理返回值（可能是 ToolResult 或字符串）
+                if isinstance(output, ToolResult):
+                    result = output
+                else:
+                    result = ToolResult(
+                        tool_call_id=tc.id,
+                        content=output if isinstance(output, str) else str(output),
+                        is_error=False,
+                    )
 
                 # 护栏后检查
                 if self._guardrails:
