@@ -618,6 +618,7 @@ class ExecutionEngine:
         """
         import base64
         import io
+        from agentforge.types import ImageContent
 
         # URL 图片无法本地处理
         if image.url and not image.base64:

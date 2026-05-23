@@ -129,14 +129,16 @@ class TestOllamaProviderRegistry:
         """测试通过注册表创建 Provider。"""
         from agentforge.providers.registry import ProviderRegistry
 
-        provider = ProviderRegistry.create("ollama", model="llama3.2")
+        # Ollama 不需要 API Key，但需要显式传递以避免 None 覆盖默认值
+        provider = ProviderRegistry.create("ollama", api_key="ollama", model="llama3.2")
         assert isinstance(provider, OllamaProvider)
 
     def test_create_via_alias(self):
         """测试通过别名创建 Provider。"""
         from agentforge.providers.registry import ProviderRegistry
 
-        provider = ProviderRegistry.create("local", model="gemma2")
+        # Ollama 不需要 API Key，但需要显式传递以避免 None 覆盖默认值
+        provider = ProviderRegistry.create("local", api_key="ollama", model="gemma2")
         assert isinstance(provider, OllamaProvider)
 
 

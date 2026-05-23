@@ -66,12 +66,41 @@ class TestOpenAIProvider:
 
     def test_mock_stream(self):
         """测试模拟流式响应。"""
+        from unittest.mock import patch, MagicMock
+        from dataclasses import dataclass
+
         provider = OpenAIProvider(api_key="test-key")
 
-        # 使用 stream 方法获取响应
-        for response in provider.stream([{"role": "user", "content": "test"}]):
-            assert response.content is not None
-            break
+        # 创建模拟的响应对象（匹配 ChatCompletionsTransport 期望的格式）
+        @dataclass
+        class MockMessage:
+            content: str
+            tool_calls: list = None
+            reasoning: str = None
+
+            def __post_init__(self):
+                if self.tool_calls is None:
+                    self.tool_calls = []
+
+        @dataclass
+        class MockChoice:
+            message: MockMessage
+            finish_reason: str = "stop"
+
+        @dataclass
+        class MockChunk:
+            choices: list
+            usage: dict = None
+
+        mock_chunk = MockChunk(
+            choices=[MockChoice(message=MockMessage(content="test response"))],
+            usage={"prompt_tokens": 10, "completion_tokens": 5},
+        )
+
+        with patch.object(provider, '_do_stream', return_value=iter([mock_chunk])):
+            responses = list(provider.stream([{"role": "user", "content": "test"}]))
+            assert len(responses) >= 1
+            assert responses[0].content == "test response"
 
     def test_to_dict(self):
         """测试转换为字典。"""
