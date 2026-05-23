@@ -6,6 +6,7 @@ from agentforge.mcp.config import MCPConfig, MCPServerConfig
 from agentforge.mcp.client import MCPClient
 from agentforge.mcp.tool import MCPTool
 from agentforge.mcp.errors import MCPConfigError, MCPConnectionError
+from agentforge.mcp.pool import MCPConnectionPool
 
 
 class MCPManager:
@@ -16,6 +17,8 @@ class MCPManager:
         self._clients: Dict[str, MCPClient] = {}
         self._tools: Dict[str, MCPTool] = {}
         self._initialized = False
+        self._pool = MCPConnectionPool()
+        MCPTool.set_pool(self._pool)
 
     async def initialize(self, config: MCPConfig) -> None:
         """
@@ -78,6 +81,9 @@ class MCPManager:
         self._clients.clear()
         self._tools.clear()
         self._initialized = False
+        # 关闭连接池
+        self._pool.shutdown()
+        MCPTool.set_pool(None)
 
     def get_all_tools(self) -> List[MCPTool]:
         """获取所有已注册的 MCP 工具。"""

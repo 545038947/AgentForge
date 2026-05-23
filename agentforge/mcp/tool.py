@@ -2,14 +2,20 @@
 
 import asyncio
 import concurrent.futures
+import logging
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from agentforge.tools.base import Tool
 from agentforge.types import ToolResult
 from agentforge.types.errors import ToolExecutionError
 from agentforge.mcp.client import MCPClient
 from agentforge.mcp.types import MCPToolSchema
+
+if TYPE_CHECKING:
+    from agentforge.mcp.pool import MCPConnectionPool
+
+logger = logging.getLogger(__name__)
 
 
 class MCPTool(Tool):
@@ -18,6 +24,18 @@ class MCPTool(Tool):
     由于 MCP Client 使用 asyncio subprocess，而 Agent 的工具执行可能是同步的，
     这个类提供了在独立线程中运行异步代码的能力。
     """
+
+    _pool: Optional["MCPConnectionPool"] = None
+
+    @classmethod
+    def set_pool(cls, pool: "MCPConnectionPool") -> None:
+        """设置连接池（由 MCPManager 调用）。"""
+        cls._pool = pool
+
+    @classmethod
+    def get_pool(cls) -> Optional["MCPConnectionPool"]:
+        """获取当前连接池。"""
+        return cls._pool
 
     def __init__(self, client: MCPClient, schema: MCPToolSchema):
         """
@@ -50,32 +68,32 @@ class MCPTool(Tool):
     # === Tool 执行 ===
 
     def execute(self, tool_call_id: str, **kwargs) -> ToolResult:
-        """
-        执行 MCP 工具调用。
+        """执行 MCP 工具调用。优先使用连接池，回退到新建连接。"""
+        # 优先使用连接池
+        if self._pool is not None:
+            try:
+                result = self._pool.call_tool(
+                    self._client.config, self.name, kwargs
+                )
+                return ToolResult(
+                    tool_call_id=tool_call_id,
+                    content=str(result),
+                    is_error=False,
+                )
+            except (OSError, RuntimeError, TimeoutError, ConnectionError) as e:
+                logger.warning(f"连接池调用失败，回退到新建连接: {e}")
 
-        使用独立线程和新的事件循环来避免与主事件循环冲突。
-
-        Args:
-            tool_call_id: 工具调用 ID
-            **kwargs: 工具参数
-
-        Returns:
-            工具执行结果
-        """
+        # 回退：在独立线程中运行，使用新的事件循环
         try:
-            # 在独立线程中运行，使用新的事件循环
             result_content = None
             result_error = None
 
             def run_in_thread():
                 nonlocal result_content, result_error
                 try:
-                    # 创建新的事件循环
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
                     try:
-                        # 复用已有的 client 连接，但需要在新循环中重新连接
-                        # 或者直接在这里进行工具调用
                         result_content = loop.run_until_complete(
                             self._execute_with_new_connection(**kwargs)
                         )
