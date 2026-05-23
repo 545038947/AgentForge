@@ -11,6 +11,14 @@ from agentforge.mcp.types import MCPToolSchema
 from agentforge.types import ToolResult
 
 
+@pytest.fixture(autouse=True)
+def _reset_mcp_pool():
+    """确保每个测试前连接池为 None，避免类变量污染。"""
+    MCPTool.set_pool(None)
+    yield
+    MCPTool.set_pool(None)
+
+
 # ---------------------------------------------------------------------------
 # 辅助工具
 # ---------------------------------------------------------------------------
