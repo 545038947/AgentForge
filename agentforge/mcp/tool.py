@@ -81,7 +81,7 @@ class MCPTool(Tool):
                         )
                     finally:
                         loop.close()
-                except Exception as e:
+                except (OSError, RuntimeError, TimeoutError, ConnectionError) as e:
                     result_error = e
 
             thread = threading.Thread(target=run_in_thread, daemon=True)
@@ -108,7 +108,7 @@ class MCPTool(Tool):
                 is_error=False,
             )
 
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             return ToolResult(
                 tool_call_id=tool_call_id,
                 content=str(e),

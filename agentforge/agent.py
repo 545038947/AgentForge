@@ -31,6 +31,7 @@ from agentforge.context import ContextCompressor
 from agentforge.tools import Tool, FunctionTool, ApprovalCallback
 from agentforge.tools.guardrails import ToolCallGuardrailController
 from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta, ToolCall
+from agentforge.types.errors import ProviderError
 from agentforge.types.messages import TextContent, ImageContent, ToolUseContent
 from agentforge.core import (
     IterationBudget,
@@ -1131,7 +1132,7 @@ class Agent:
                     yield chunk
                     final_response = chunk
 
-            except Exception as e:
+            except (ProviderError, OSError, ConnectionError, TimeoutError, RuntimeError) as e:
                 logger.error(f"流式调用失败: {e}")
                 # 对于流式调用，暂时不实现完整重试
                 yield NormalizedResponse(
@@ -1344,7 +1345,7 @@ class Agent:
                             reasoning=delta_reasoning,
                         )
 
-            except Exception as e:
+            except (ProviderError, OSError, ConnectionError, TimeoutError, RuntimeError) as e:
                 logger.error(f"流式调用失败: {e}")
                 yield StreamDelta(
                     content=f"\n[错误: {e}]",
@@ -1493,7 +1494,7 @@ class Agent:
             if agent is not None:
                 try:
                     agent.shutdown()
-                except Exception:
+                except (OSError, RuntimeError):
                     pass
 
         try:
@@ -1530,7 +1531,7 @@ class Agent:
                 "reset": headers.get("x-ratelimit-reset"),
                 "limit": headers.get("x-ratelimit-limit"),
             }
-        except Exception:
+        except (KeyError, TypeError, ValueError):
             pass
 
     def get_activity_summary(self) -> Dict[str, Any]:

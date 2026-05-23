@@ -1,12 +1,15 @@
 """HTTP Transport - 通过 HTTP/SSE 与远程 MCP Server 通信。"""
 
 import json
+import logging
 from typing import Any, Dict, Optional
 
 import httpx
 
 from agentforge.mcp.errors import MCPConnectionError
 from agentforge.mcp.transport import MCPTransport
+
+logger = logging.getLogger(__name__)
 
 
 class HTTPTransport(MCPTransport):
@@ -129,9 +132,9 @@ class HTTPTransport(MCPTransport):
                 json=notification,
             )
 
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError) as e:
             # 通知失败不抛出错误，只记录
-            pass
+            logger.debug(f"MCP 通知发送失败: {e}")
 
     async def close(self) -> None:
         """关闭 HTTP 客户端。"""

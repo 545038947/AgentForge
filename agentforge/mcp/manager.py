@@ -72,7 +72,7 @@ class MCPManager:
         for client in self._clients.values():
             try:
                 await client.disconnect()
-            except Exception:
+            except (OSError, RuntimeError, MCPConnectionError):
                 pass
 
         self._clients.clear()

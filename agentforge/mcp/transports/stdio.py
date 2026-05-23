@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import signal
+import subprocess
 import sys
 from typing import Any, Dict, Optional
 
@@ -160,7 +161,7 @@ class StdioTransport(MCPTransport):
             try:
                 writer.close()
                 await writer.wait_closed()
-            except Exception:
+            except (OSError, ConnectionError, BrokenPipeError, RuntimeError):
                 pass
 
         # 异步尝试优雅终止
@@ -171,7 +172,7 @@ class StdioTransport(MCPTransport):
             except asyncio.TimeoutError:
                 # 超时后使用同步方式强制终止
                 self._force_kill_sync(pid)
-            except Exception:
+            except (OSError, ProcessLookupError):
                 # 其他异常也尝试同步强制终止
                 self._force_kill_sync(pid)
 
@@ -198,7 +199,7 @@ class StdioTransport(MCPTransport):
                 return True
         except (ProcessLookupError, OSError):
             return False
-        except Exception:
+        except (OSError, subprocess.SubprocessError, PermissionError):
             return False
 
     def _force_kill_sync(self, pid: Optional[int]) -> None:
@@ -224,7 +225,7 @@ class StdioTransport(MCPTransport):
         except ProcessLookupError:
             # 进程已经不存在
             pass
-        except Exception:
+        except (OSError, subprocess.SubprocessError, PermissionError):
             # 忽略其他错误（进程可能已经终止）
             pass
 

@@ -292,7 +292,7 @@ class ExecutionEngine:
                 result.api_calls = self._state.api_call_count
                 return result
 
-            except Exception as e:
+            except (ProviderError, OSError, ConnectionError, TimeoutError, RuntimeError) as e:
                 # 分类错误
                 approx_tokens = self._estimate_tokens(messages)
                 context_length = self._get_context_length()
