@@ -2,36 +2,36 @@
 
 ## MemoryManager
 
-::: agentforge.memory.MemoryManager
+::: hai_agent.memory.MemoryManager
     options:
       show_source: false
 
 ## MemoryStoreBase
 
-::: agentforge.memory.MemoryStoreBase
+::: hai_agent.memory.MemoryStoreBase
     options:
       show_source: false
 
 ## MemoryStore
 
-::: agentforge.memory.MemoryStore
+::: hai_agent.memory.MemoryStore
     options:
       show_source: false
 
 ## MemoryMetadata
 
-::: agentforge.memory.MemoryMetadata
+::: hai_agent.memory.MemoryMetadata
     options:
       show_source: false
 
 ## MemoryExtractor
 
-::: agentforge.memory.MemoryExtractor
+::: hai_agent.memory.MemoryExtractor
     options:
       show_source: false
 
-::: agentforge.memory.RuleBasedExtractor
+::: hai_agent.memory.RuleBasedExtractor
     options:
       show_source: false
 
-::: agentforge.memory.create_extractor
+::: hai_agent.memory.create_extractor

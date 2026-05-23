@@ -34,6 +34,8 @@ nav:
       - user-guide/memory.md
       - user-guide/streaming.md
       - user-guide/async.md
+      - user-guide/profiles.md
+      - user-guide/custom-providers.md
   - API 参考:
       - api-reference/agent.md
       - api-reference/memory.md
@@ -43,6 +45,7 @@ nav:
       - api-reference/types.md
       - api-reference/events.md
       - api-reference/core.md
+      - api-reference/metrics.md
   - 进阶指南:
       - guides/memory-extension.md
   - 更新日志: changelog.md

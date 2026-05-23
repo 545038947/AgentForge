@@ -146,7 +146,7 @@ class TestToolsetDefinition:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_toolsets.py -v`
-Expected: FAIL with "No module named 'agentforge.tools.toolsets'"
+Expected: FAIL with "No module named 'hai_agent.tools.toolsets'"
 
 - [ ] **Step 3: Write ToolsetDefinition implementation**
 
@@ -709,7 +709,7 @@ class TestInMemorySessionProvider:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_session.py -v`
-Expected: FAIL with "No module named 'agentforge.session'"
+Expected: FAIL with "No module named 'hai_agent.session'"
 
 - [ ] **Step 3: Write SessionProvider implementation**
 
@@ -1664,7 +1664,7 @@ class TestDefaultModelMetadataProvider:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_model_metadata.py -v`
-Expected: FAIL with "No module named 'agentforge.core.model_metadata'"
+Expected: FAIL with "No module named 'hai_agent.core.model_metadata'"
 
 - [ ] **Step 3: Write ModelCapabilities implementation**
 

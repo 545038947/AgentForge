@@ -2,40 +2,40 @@
 
 ## 执行引擎
 
-::: agentforge.core.ExecutionEngine
+::: hai_agent.core.ExecutionEngine
     options:
       show_source: false
 
-::: agentforge.core.ExecutionConfig
+::: hai_agent.core.ExecutionConfig
     options:
       show_source: false
 
-::: agentforge.core.ExecutionResult
+::: hai_agent.core.ExecutionResult
     options:
       show_source: false
 
 ## 回退链
 
-::: agentforge.core.FallbackChain
+::: hai_agent.core.FallbackChain
     options:
       show_source: false
 
 ## 重试策略
 
-::: agentforge.core.RetryPolicy
+::: hai_agent.core.RetryPolicy
     options:
       show_source: false
 
-::: agentforge.core.jittered_backoff
+::: hai_agent.core.jittered_backoff
 
 ## 流式累积器
 
-::: agentforge.core.StreamAccumulator
+::: hai_agent.core.StreamAccumulator
     options:
       show_source: false
 
 ## 模型能力
 
-::: agentforge.core.ModelCapabilities
+::: hai_agent.core.ModelCapabilities
     options:
       show_source: false

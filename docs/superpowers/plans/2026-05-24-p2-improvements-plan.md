@@ -357,7 +357,7 @@ class TestMCPConnectionPoolMocked:
         mock_client = MagicMock()
         mock_client.is_connected = True
 
-        with patch("agentforge.mcp.pool.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.pool.MCPClient", return_value=mock_client):
             with patch.object(pool, "_loop") as mock_loop:
                 # 模拟 asyncio.run_coroutine_threadsafe
                 mock_future = MagicMock()

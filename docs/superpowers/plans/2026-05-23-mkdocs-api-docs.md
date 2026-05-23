@@ -289,7 +289,7 @@ agent.sync()
 ```markdown
 # Agent API
 
-::: agentforge.agent.Agent
+::: hai_agent.agent.Agent
     options:
       show_source: false
       members:
@@ -316,39 +316,39 @@ agent.sync()
 
 ## MemoryManager
 
-::: agentforge.memory.MemoryManager
+::: hai_agent.memory.MemoryManager
     options:
       show_source: false
 
 ## MemoryStoreBase
 
-::: agentforge.memory.MemoryStoreBase
+::: hai_agent.memory.MemoryStoreBase
     options:
       show_source: false
 
 ## MemoryStore
 
-::: agentforge.memory.MemoryStore
+::: hai_agent.memory.MemoryStore
     options:
       show_source: false
 
 ## MemoryMetadata
 
-::: agentforge.memory.MemoryMetadata
+::: hai_agent.memory.MemoryMetadata
     options:
       show_source: false
 
 ## MemoryExtractor
 
-::: agentforge.memory.MemoryExtractor
+::: hai_agent.memory.MemoryExtractor
     options:
       show_source: false
 
-::: agentforge.memory.RuleBasedExtractor
+::: hai_agent.memory.RuleBasedExtractor
     options:
       show_source: false
 
-::: agentforge.memory.create_extractor
+::: hai_agent.memory.create_extractor
 ```
 
 - [ ] **Step 3: 创建 docs/api-reference/tools.md**
@@ -358,31 +358,31 @@ agent.sync()
 
 ## Tool 基类
 
-::: agentforge.tools.Tool
+::: hai_agent.tools.Tool
     options:
       show_source: false
 
-::: agentforge.tools.FunctionTool
+::: hai_agent.tools.FunctionTool
     options:
       show_source: false
 
 ## 工具装饰器
 
-::: agentforge.tools.tool
+::: hai_agent.tools.tool
 
 ## 工具执行器
 
-::: agentforge.tools.executor.ToolExecutor
+::: hai_agent.tools.executor.ToolExecutor
     options:
       show_source: false
 
 ## 工具集
 
-::: agentforge.tools.toolsets.ToolsetDefinition
+::: hai_agent.tools.toolsets.ToolsetDefinition
     options:
       show_source: false
 
-::: agentforge.tools.toolsets.ToolsetRegistry
+::: hai_agent.tools.toolsets.ToolsetRegistry
     options:
       show_source: false
 ```
@@ -394,33 +394,33 @@ agent.sync()
 
 ## Provider 基类
 
-::: agentforge.providers.Provider
+::: hai_agent.providers.Provider
     options:
       show_source: false
 
 ## Provider Profile
 
-::: agentforge.providers.profile.ProviderProfile
+::: hai_agent.providers.profile.ProviderProfile
     options:
       show_source: false
 
 ## Transport
 
-::: agentforge.providers.transports.Transport
+::: hai_agent.providers.transports.Transport
     options:
       show_source: false
 
 ## 内置 Provider
 
-::: agentforge.providers.builtins.openai.OpenAIProvider
+::: hai_agent.providers.builtins.openai.OpenAIProvider
     options:
       show_source: false
 
-::: agentforge.providers.builtins.anthropic.AnthropicProvider
+::: hai_agent.providers.builtins.anthropic.AnthropicProvider
     options:
       show_source: false
 
-::: agentforge.providers.builtins.ollama.OllamaProvider
+::: hai_agent.providers.builtins.ollama.OllamaProvider
     options:
       show_source: false
 ```
@@ -432,29 +432,29 @@ agent.sync()
 
 ## SessionProvider
 
-::: agentforge.session.SessionProvider
+::: hai_agent.session.SessionProvider
     options:
       show_source: false
 
 ## SessionInfo
 
-::: agentforge.session.SessionInfo
+::: hai_agent.session.SessionInfo
     options:
       show_source: false
 
 ## MessageRecord
 
-::: agentforge.session.MessageRecord
+::: hai_agent.session.MessageRecord
     options:
       show_source: false
 
 ## 内置实现
 
-::: agentforge.session.InMemorySessionProvider
+::: hai_agent.session.InMemorySessionProvider
     options:
       show_source: false
 
-::: agentforge.session.FileBasedSessionProvider
+::: hai_agent.session.FileBasedSessionProvider
     options:
       show_source: false
 ```
@@ -466,49 +466,49 @@ agent.sync()
 
 ## 消息类型
 
-::: agentforge.types.Message
+::: hai_agent.types.Message
     options:
       show_source: false
 
-::: agentforge.types.TextContent
+::: hai_agent.types.TextContent
     options:
       show_source: false
 
-::: agentforge.types.ImageContent
+::: hai_agent.types.ImageContent
     options:
       show_source: false
 
-::: agentforge.types.ToolUseContent
+::: hai_agent.types.ToolUseContent
     options:
       show_source: false
 
-::: agentforge.types.ToolResultContent
+::: hai_agent.types.ToolResultContent
     options:
       show_source: false
 
 ## 响应类型
 
-::: agentforge.types.NormalizedResponse
+::: hai_agent.types.NormalizedResponse
     options:
       show_source: false
 
-::: agentforge.types.StreamDelta
+::: hai_agent.types.StreamDelta
     options:
       show_source: false
 
 ## 工具类型
 
-::: agentforge.types.ToolCall
+::: hai_agent.types.ToolCall
     options:
       show_source: false
 
-::: agentforge.types.ToolResult
+::: hai_agent.types.ToolResult
     options:
       show_source: false
 
 ## 使用量
 
-::: agentforge.types.Usage
+::: hai_agent.types.Usage
     options:
       show_source: false
 ```
@@ -520,25 +520,25 @@ agent.sync()
 
 ## EventType
 
-::: agentforge.events.EventType
+::: hai_agent.events.EventType
     options:
       show_source: false
 
 ## Event
 
-::: agentforge.events.Event
+::: hai_agent.events.Event
     options:
       show_source: false
 
 ## EventDispatcher
 
-::: agentforge.events.EventDispatcher
+::: hai_agent.events.EventDispatcher
     options:
       show_source: false
 
 ## 钩子装饰器
 
-::: agentforge.events.on_event
+::: hai_agent.events.on_event
 ```
 
 - [ ] **Step 8: 创建 docs/api-reference/core.md**
@@ -548,41 +548,41 @@ agent.sync()
 
 ## 执行引擎
 
-::: agentforge.core.ExecutionEngine
+::: hai_agent.core.ExecutionEngine
     options:
       show_source: false
 
-::: agentforge.core.ExecutionConfig
+::: hai_agent.core.ExecutionConfig
     options:
       show_source: false
 
-::: agentforge.core.ExecutionResult
+::: hai_agent.core.ExecutionResult
     options:
       show_source: false
 
 ## 回退链
 
-::: agentforge.core.FallbackChain
+::: hai_agent.core.FallbackChain
     options:
       show_source: false
 
 ## 重试策略
 
-::: agentforge.core.RetryPolicy
+::: hai_agent.core.RetryPolicy
     options:
       show_source: false
 
-::: agentforge.core.jittered_backoff
+::: hai_agent.core.jittered_backoff
 
 ## 流式累积器
 
-::: agentforge.core.StreamAccumulator
+::: hai_agent.core.StreamAccumulator
     options:
       show_source: false
 
 ## 模型能力
 
-::: agentforge.core.ModelCapabilities
+::: hai_agent.core.ModelCapabilities
     options:
       show_source: false
 ```

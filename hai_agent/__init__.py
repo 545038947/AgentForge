@@ -159,6 +159,20 @@ from hai_agent.mcp import (
     MCPConfigError,
 )
 
+# 指标系统
+from hai_agent.metrics import (
+    MetricsCollector,
+    PrometheusExporter,
+)
+
+# 委托系统
+from hai_agent.delegation import (
+    DelegationManager,
+    DelegationConfig,
+    DelegationResult,
+    DelegationStrategy,
+)
+
 # 触发内置 Provider 自动注册
 import hai_agent.providers.builtins
 
@@ -284,4 +298,12 @@ __all__ = [
     "MCPToolCallError",
     "MCPResourceError",
     "MCPConfigError",
+    # 指标系统
+    "MetricsCollector",
+    "PrometheusExporter",
+    # 委托系统
+    "DelegationManager",
+    "DelegationConfig",
+    "DelegationResult",
+    "DelegationStrategy",
 ]

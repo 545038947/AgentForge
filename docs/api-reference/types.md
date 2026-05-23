@@ -2,48 +2,48 @@
 
 ## 消息类型
 
-::: agentforge.types.Message
+::: hai_agent.types.Message
     options:
       show_source: false
 
-::: agentforge.types.TextContent
+::: hai_agent.types.TextContent
     options:
       show_source: false
 
-::: agentforge.types.ImageContent
+::: hai_agent.types.ImageContent
     options:
       show_source: false
 
-::: agentforge.types.ToolUseContent
+::: hai_agent.types.ToolUseContent
     options:
       show_source: false
 
-::: agentforge.types.ToolResultContent
+::: hai_agent.types.ToolResultContent
     options:
       show_source: false
 
 ## 响应类型
 
-::: agentforge.types.NormalizedResponse
+::: hai_agent.types.NormalizedResponse
     options:
       show_source: false
 
-::: agentforge.types.StreamDelta
+::: hai_agent.types.StreamDelta
     options:
       show_source: false
 
 ## 工具类型
 
-::: agentforge.types.ToolCall
+::: hai_agent.types.ToolCall
     options:
       show_source: false
 
-::: agentforge.types.ToolResult
+::: hai_agent.types.ToolResult
     options:
       show_source: false
 
 ## 使用量
 
-::: agentforge.types.Usage
+::: hai_agent.types.Usage
     options:
       show_source: false

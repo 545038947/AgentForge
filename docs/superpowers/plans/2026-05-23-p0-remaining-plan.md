@@ -480,7 +480,7 @@ class TestMCPClientConnect:
             {"resources": []},
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         assert client.is_connected() is True
@@ -503,7 +503,7 @@ class TestMCPClientConnect:
             {"resources": []},
         ]
 
-        with patch("agentforge.mcp.client.HTTPTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.HTTPTransport", return_value=mock_transport):
             await client.connect()
 
         assert client.is_connected() is True
@@ -882,7 +882,7 @@ class TestMCPManagerInitialize:
         mock_client.connect = AsyncMock()
         mock_client.is_connected.return_value = True
 
-        with patch("agentforge.mcp.manager.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.manager.MCPClient", return_value=mock_client):
             await manager.initialize(config)
 
         assert manager.is_initialized() is True
@@ -912,7 +912,7 @@ class TestMCPManagerInitialize:
         mock_client = AsyncMock(spec=MCPClient)
         mock_client.connect.side_effect = MCPConnectionError("failed")
 
-        with patch("agentforge.mcp.manager.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.manager.MCPClient", return_value=mock_client):
             await manager.initialize(config)
 
         # 应继续初始化，不抛异常
@@ -1092,7 +1092,7 @@ class TestHTTPTransportConnect:
         mock_http_client = AsyncMock()
         mock_http_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_http_client):
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_http_client):
             await transport.connect()
 
         assert transport.is_connected() is True
@@ -1239,7 +1239,7 @@ if self._client is None:
 def _mock_response(self):
     raise ProviderError(
         f"{self.name} Provider 尚未实现真实 API 调用。"
-        f"请使用 agentforge.providers.builtins.{self.name} 代替。"
+        f"请使用 hai_agent.providers.builtins.{self.name} 代替。"
     )
 ```
 

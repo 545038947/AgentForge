@@ -31,7 +31,7 @@ AgentForge 是一个独立、可复用的 Agent 框架库，从 hermes-agent 的
 | 用户类型 | 需求 | API 层级 |
 |---------|------|---------|
 | 应用开发者 | 快速构建 Agent 应用 | `agentforge` |
-| 框架开发者 | 扩展 Provider、Tool 等 | `agentforge.ext` |
+| 框架开发者 | 扩展 Provider、Tool 等 | `hai_agent.ext` |
 
 ### 1.4 技术选型
 
@@ -2682,7 +2682,7 @@ register_skill("my_skill", MySkill)
 # Entry Points 发现（第三方插件）
 # setup.py:
 entry_points={
-    "agentforge.providers": [
+    "hai_agent.providers": [
         "my_provider = my_package:MyProvider",
     ],
 }
@@ -2733,9 +2733,9 @@ class ProviderRegistry:
         try:
             eps = importlib.metadata.entry_points()
             if hasattr(eps, 'select'):
-                provider_eps = eps.select(group="agentforge.providers")
+                provider_eps = eps.select(group="hai_agent.providers")
             else:
-                provider_eps = eps.get("agentforge.providers", [])
+                provider_eps = eps.get("hai_agent.providers", [])
             
             for ep in provider_eps:
                 if ep.name not in cls._providers:
@@ -3501,7 +3501,7 @@ def configure_logging(debug: bool = False) -> None:
 
 - **稳定 API**：`agentforge` 包下的公共 API 保证向后兼容
 - **实验性 API**：标记为 `@experimental` 的 API 可能变更
-- **内部 API**：`agentforge._internal` 不保证兼容性
+- **内部 API**：`hai_agent._internal` 不保证兼容性
 
 ### 15.2 版本策略
 

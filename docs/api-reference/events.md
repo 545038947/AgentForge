@@ -2,22 +2,22 @@
 
 ## EventType
 
-::: agentforge.events.EventType
+::: hai_agent.events.EventType
     options:
       show_source: false
 
 ## Event
 
-::: agentforge.events.Event
+::: hai_agent.events.Event
     options:
       show_source: false
 
 ## EventDispatcher
 
-::: agentforge.events.EventDispatcher
+::: hai_agent.events.EventDispatcher
     options:
       show_source: false
 
 ## 钩子装饰器
 
-::: agentforge.events.on_event
+::: hai_agent.events.on_event

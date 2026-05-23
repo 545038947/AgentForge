@@ -2,28 +2,28 @@
 
 ## SessionProvider
 
-::: agentforge.session.SessionProvider
+::: hai_agent.session.SessionProvider
     options:
       show_source: false
 
 ## SessionInfo
 
-::: agentforge.session.SessionInfo
+::: hai_agent.session.SessionInfo
     options:
       show_source: false
 
 ## MessageRecord
 
-::: agentforge.session.MessageRecord
+::: hai_agent.session.MessageRecord
     options:
       show_source: false
 
 ## 内置实现
 
-::: agentforge.session.InMemorySessionProvider
+::: hai_agent.session.InMemorySessionProvider
     options:
       show_source: false
 
-::: agentforge.session.FileBasedSessionProvider
+::: hai_agent.session.FileBasedSessionProvider
     options:
       show_source: false

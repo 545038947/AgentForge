@@ -2,30 +2,30 @@
 
 ## Tool 基类
 
-::: agentforge.tools.Tool
+::: hai_agent.tools.Tool
     options:
       show_source: false
 
-::: agentforge.tools.FunctionTool
+::: hai_agent.tools.FunctionTool
     options:
       show_source: false
 
 ## 工具装饰器
 
-::: agentforge.tools.tool
+::: hai_agent.tools.tool
 
 ## 工具执行器
 
-::: agentforge.tools.executor.ToolExecutor
+::: hai_agent.tools.executor.ToolExecutor
     options:
       show_source: false
 
 ## 工具集
 
-::: agentforge.tools.toolsets.ToolsetDefinition
+::: hai_agent.tools.toolsets.ToolsetDefinition
     options:
       show_source: false
 
-::: agentforge.tools.toolsets.ToolsetRegistry
+::: hai_agent.tools.toolsets.ToolsetRegistry
     options:
       show_source: false

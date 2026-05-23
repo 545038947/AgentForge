@@ -2,32 +2,32 @@
 
 ## Provider 基类
 
-::: agentforge.providers.Provider
+::: hai_agent.providers.Provider
     options:
       show_source: false
 
 ## Provider Profile
 
-::: agentforge.providers.profile.ProviderProfile
+::: hai_agent.providers.profile.ProviderProfile
     options:
       show_source: false
 
 ## Transport
 
-::: agentforge.providers.transports.Transport
+::: hai_agent.providers.transports.Transport
     options:
       show_source: false
 
 ## 内置 Provider
 
-::: agentforge.providers.builtins.openai.OpenAIProvider
+::: hai_agent.providers.builtins.openai.OpenAIProvider
     options:
       show_source: false
 
-::: agentforge.providers.builtins.anthropic.AnthropicProvider
+::: hai_agent.providers.builtins.anthropic.AnthropicProvider
     options:
       show_source: false
 
-::: agentforge.providers.builtins.ollama.OllamaProvider
+::: hai_agent.providers.builtins.ollama.OllamaProvider
     options:
       show_source: false

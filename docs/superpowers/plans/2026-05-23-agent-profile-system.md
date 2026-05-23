@@ -159,7 +159,7 @@ class TestAgentProfile:
 - [ ] **Step 3: 运行测试确认失败**
 
 Run: `pytest tests/test_agent_profile.py -v`
-Expected: FAIL with "ModuleNotFoundError: No module named 'agentforge.profiles'"
+Expected: FAIL with "ModuleNotFoundError: No module named 'hai_agent.profiles'"
 
 - [ ] **Step 4: 实现 AgentProfile 数据类**
 

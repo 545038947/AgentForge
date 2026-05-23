@@ -1,6 +1,6 @@
 # Agent API
 
-::: agentforge.agent.Agent
+::: hai_agent.agent.Agent
     options:
       show_source: false
       members:
