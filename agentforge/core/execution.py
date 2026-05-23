@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import (
@@ -194,6 +195,7 @@ class ExecutionEngine:
 
         # 执行状态
         self._state = ExecutionState()
+        self._state_lock = threading.Lock()
 
         # 重试策略
         self._retry_policy = RetryPolicy(
@@ -207,9 +209,32 @@ class ExecutionEngine:
         """获取当前执行状态。"""
         return self._state
 
+    def _increment_api_call_count(self) -> None:
+        """线程安全地递增 API 调用计数。"""
+        with self._state_lock:
+            self._state.api_call_count += 1
+
+    def _increment_retry_count(self) -> None:
+        """线程安全地递增重试计数。"""
+        with self._state_lock:
+            self._state.retry_count += 1
+
+    def _reset_retry_and_compression(self) -> None:
+        """线程安全地重置重试计数和压缩尝试计数。"""
+        with self._state_lock:
+            self._state.retry_count = 0
+            self._state.compression_attempts = 0
+
+    def _record_error(self, error: Exception, classified: ClassifiedError) -> None:
+        """线程安全地记录错误。"""
+        with self._state_lock:
+            self._state.errors.append(error)
+            self._state.classified_errors.append(classified)
+
     def reset_for_turn(self) -> None:
         """重置本轮状态。"""
-        self._state.reset_for_turn()
+        with self._state_lock:
+            self._state.reset_for_turn()
         if self._guardrails:
             self._guardrails.reset_for_turn()
 
@@ -254,7 +279,7 @@ class ExecutionEngine:
 
             # 尝试 API 调用
             try:
-                self._state.api_call_count += 1
+                self._increment_api_call_count()
 
                 # 发射请求事件
                 if self._event_dispatcher:
@@ -306,7 +331,7 @@ class ExecutionEngine:
                     num_messages=len(messages),
                 )
 
-                self._state.record_error(e, classified)
+                self._record_error(e, classified)
 
                 if on_error:
                     on_error(e, classified)
@@ -323,8 +348,7 @@ class ExecutionEngine:
                     # 恢复成功，继续循环
                     if recovery_result.get("messages"):
                         messages = recovery_result["messages"]
-                    self._state.retry_count = 0
-                    self._state.compression_attempts = 0
+                    self._reset_retry_and_compression()
                     continue
 
                 # 检查是否应该停止重试
@@ -335,12 +359,11 @@ class ExecutionEngine:
                     return result
 
                 # 检查是否达到最大重试次数
-                self._state.retry_count += 1
+                self._increment_retry_count()
                 if self._state.retry_count >= self._config.max_retries:
                     # 尝试回退
                     if self._try_activate_fallback(on_fallback):
-                        self._state.retry_count = 0
-                        self._state.compression_attempts = 0
+                        self._reset_retry_and_compression()
                         continue
 
                     result.failed = True
@@ -396,12 +419,11 @@ class ExecutionEngine:
         on_retry: Optional[Callable[[int, float, ClassifiedError], None]] = None,
     ) -> None:
         """处理无效响应。"""
-        self._state.retry_count += 1
+        self._increment_retry_count()
 
         # 尝试回退
         if self._try_activate_fallback(None):
-            self._state.retry_count = 0
-            self._state.compression_attempts = 0
+            self._reset_retry_and_compression()
             return
 
         # 达到最大重试次数
@@ -465,15 +487,25 @@ class ExecutionEngine:
 
         # 5. Thinking signature：清除 reasoning blocks
         if classified.reason == ErrorReason.thinking_signature:
-            if not self._state.thinking_sig_retry_attempted:
-                self._state.thinking_sig_retry_attempted = True
+            with self._state_lock:
+                if not self._state.thinking_sig_retry_attempted:
+                    self._state.thinking_sig_retry_attempted = True
+                    should_clear = True
+                else:
+                    should_clear = False
+            if should_clear:
                 cleared_messages = self._clear_reasoning_blocks(messages)
                 return {"messages": cleared_messages}
 
         # 6. 图片过大：尝试缩小
         if classified.reason == ErrorReason.image_too_large:
-            if not self._state.image_shrink_retry_attempted:
-                self._state.image_shrink_retry_attempted = True
+            with self._state_lock:
+                if not self._state.image_shrink_retry_attempted:
+                    self._state.image_shrink_retry_attempted = True
+                    should_shrink = True
+                else:
+                    should_shrink = False
+            if should_shrink:
                 shrunk_messages = self._shrink_images(messages)
                 return {"messages": shrunk_messages}
 
@@ -489,9 +521,11 @@ class ExecutionEngine:
         if not self._context_compressor:
             return None
 
-        self._state.compression_attempts += 1
+        with self._state_lock:
+            self._state.compression_attempts += 1
+            attempts = self._state.compression_attempts
 
-        if self._state.compression_attempts > self._config.max_compression_attempts:
+        if attempts > self._config.max_compression_attempts:
             return None
 
         original_len = len(messages)
