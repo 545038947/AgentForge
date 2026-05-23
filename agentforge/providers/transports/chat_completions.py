@@ -160,8 +160,10 @@ class ChatCompletionsTransport(Transport):
                 pass
 
         result = {"role": msg.role}
-        if text_parts:
-            result["content"] = "\n".join(text_parts)
+        # OpenAI API 规范允许 assistant 消息没有 content（只有 tool_calls）
+        # 但某些 Provider（如 Ollama）要求必须有 content 字段
+        # 设置 content 为空字符串以兼容这些 Provider
+        result["content"] = "\n".join(text_parts) if text_parts else ""
         if tool_calls:
             result["tool_calls"] = tool_calls
 
