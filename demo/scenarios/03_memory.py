@@ -14,19 +14,8 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
-
-
-def check_ollama() -> bool:
-    """检查 Ollama 服务是否可用。"""
-    import requests
-
-    try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
-        return response.status_code == 200
-    except Exception:
-        return False
+from demo.utils import setup_demo, print_section, create_agent
+from demo.config import get_config
 
 
 def cleanup_memory_dir(memory_dir: str):
@@ -41,16 +30,13 @@ def main():
     print("AgentForge 记忆系统演示")
     print("=" * 50)
 
-    # 检查 Ollama
-    if not check_ollama():
-        print("\n❌ 错误: Ollama 服务未运行")
-        print("请先启动 Ollama: ollama serve")
-        sys.exit(1)
+    # 加载配置
+    config = get_config()
 
-    print("\n✅ Ollama 服务已连接")
-
-    # 记忆存储路径
-    memory_dir = Path(__file__).parent.parent / "memory_store"
+    # 记忆存储路径（从配置获取）
+    memory_dir = Path(config.memory.store_path)
+    if not memory_dir.is_absolute():
+        memory_dir = Path(__file__).parent.parent / memory_dir
 
     # 清理旧的记忆数据
     cleanup_memory_dir(str(memory_dir))
@@ -58,14 +44,11 @@ def main():
     print(f"\n📁 记忆存储路径: {memory_dir}")
 
     # ========== 会话 1 ==========
-    print("\n" + "=" * 50)
-    print("=== 会话 1: 存储记忆 ===")
-    print("=" * 50)
+    print_section("会话 1: 存储记忆")
 
     # 创建 Agent-1
-    provider1 = OllamaProvider(model="llama3.2")
-    agent1 = Agent(provider=provider1)
-    print(f"\n📦 创建 Agent-1, 模型: {provider1._model}")
+    agent1, config = create_agent()
+    print(f"\n📦 创建 Agent-1, 模型: {config.ollama.model}")
 
     # 启用记忆存储
     agent1.enable_memory_store(str(memory_dir))
@@ -95,14 +78,11 @@ def main():
         print("-" * 30)
 
     # ========== 会话 2 ==========
-    print("\n" + "=" * 50)
-    print("=== 会话 2: 恢复记忆 ===")
-    print("=" * 50)
+    print_section("会话 2: 恢复记忆")
 
     # 创建 Agent-2
-    provider2 = OllamaProvider(model="llama3.2")
-    agent2 = Agent(provider=provider2)
-    print(f"\n📦 创建 Agent-2, 模型: {provider2._model}")
+    agent2, config = create_agent()
+    print(f"\n📦 创建 Agent-2, 模型: {config.ollama.model}")
 
     # 启用记忆存储
     agent2.enable_memory_store(str(memory_dir))

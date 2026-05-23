@@ -1,0 +1,33 @@
+# AgentForge Demo 配置文件
+
+# Ollama 服务配置
+ollama:
+  # 服务地址
+  base_url: "http://localhost:11434/v1"
+  # 默认模型
+  model: "gemma4:31b-cloud"
+  # 请求超时（秒）
+  timeout: 600
+
+# Agent 配置
+agent:
+  # 系统提示（可选）
+  system_prompt: ""
+  # 最大 Token 数
+  max_tokens: 4096
+  # 温度
+  temperature: 0.7
+
+# 记忆系统配置
+memory:
+  # 存储路径
+  store_path: "./memory_store"
+  # 是否启用自动提取
+  auto_extract: false
+
+# 委托系统配置
+delegation:
+  # 最大并发数
+  max_concurrent: 3
+  # 最大深度
+  max_depth: 2

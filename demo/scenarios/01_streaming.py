@@ -14,26 +14,12 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from demo.utils import setup_demo, print_section
 
 
-def check_ollama() -> bool:
-    """检查 Ollama 服务是否可用。"""
-    import requests
-
-    try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
-        return response.status_code == 200
-    except Exception:
-        return False
-
-
-def demo_sync_streaming(agent: Agent):
+def demo_sync_streaming(agent):
     """演示同步流式响应。"""
-    print("\n" + "=" * 50)
-    print("=== 同步流式响应 ===")
-    print("=" * 50)
+    print_section("同步流式响应")
 
     prompt = "请用简短的几句话介绍一下 Python 编程语言的特点。"
     print(f"\n问题: {prompt}\n")
@@ -52,11 +38,9 @@ def demo_sync_streaming(agent: Agent):
     print(f"📝 内容长度: {len(total_content)} 字符")
 
 
-async def demo_async_streaming(agent: Agent):
+async def demo_async_streaming(agent):
     """演示异步流式响应。"""
-    print("\n" + "=" * 50)
-    print("=== 异步流式响应 ===")
-    print("=" * 50)
+    print_section("异步流式响应")
 
     prompt = "请用一句话解释什么是机器学习。"
     print(f"\n问题: {prompt}\n")
@@ -75,11 +59,9 @@ async def demo_async_streaming(agent: Agent):
     print(f"📝 内容长度: {len(total_content)} 字符")
 
 
-def demo_delta_streaming(agent: Agent):
+def demo_delta_streaming(agent):
     """演示 Token 级别增量流式。"""
-    print("\n" + "=" * 50)
-    print("=== Token 增量流式 ===")
-    print("=" * 50)
+    print_section("Token 增量流式")
 
     prompt = "请列出 3 个 Python 的应用领域。"
     print(f"\n问题: {prompt}\n")
@@ -110,29 +92,16 @@ def main():
     print("AgentForge 流式响应演示")
     print("=" * 50)
 
-    # 检查 Ollama
-    if not check_ollama():
-        print("\n❌ 错误: Ollama 服务未运行")
-        print("请先启动 Ollama: ollama serve")
-        sys.exit(1)
-
-    print("\n✅ Ollama 服务已连接")
-
-    # 创建 Agent
-    provider = OllamaProvider(model="llama3.2")
-    agent = Agent(provider=provider)
-    print(f"📦 模型: {provider._model}")
+    # 设置 Demo 环境
+    agent, config = setup_demo()
+    print(f"📦 模型: {config.ollama.model}")
 
     # 演示同步流式
     demo_sync_streaming(agent)
-
-    # 清空上下文
     agent.clear()
 
     # 演示异步流式
     asyncio.run(demo_async_streaming(agent))
-
-    # 清空上下文
     agent.clear()
 
     # 演示 Token 增量流式

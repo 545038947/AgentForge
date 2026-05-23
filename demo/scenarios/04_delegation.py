@@ -13,27 +13,15 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
 from agentforge.delegation import DelegationManager, DelegationStrategy
-
-
-def check_ollama() -> bool:
-    """检查 Ollama 服务是否可用。"""
-    import requests
-
-    try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
-        return response.status_code == 200
-    except Exception:
-        return False
+from agentforge.delegation.config import TaskSpec, DelegationConfig
+from demo.utils import setup_demo, print_section, create_agent
+from demo.config import get_config
 
 
 def demo_single_delegation(manager: DelegationManager):
     """演示单任务委托。"""
-    print("\n" + "=" * 50)
-    print("=== 单任务委托 ===")
-    print("=" * 50)
+    print_section("单任务委托")
 
     goal = "解释什么是 REST API，用简单的语言描述"
     print(f"\n任务: {goal}")
@@ -50,13 +38,9 @@ def demo_single_delegation(manager: DelegationManager):
                 print(f"错误: {r.error}")
 
 
-def demo_batch_delegation(manager: DelegationManager):
+def demo_batch_delegation(manager: DelegationManager, config):
     """演示批量并行委托。"""
-    print("\n" + "=" * 50)
-    print("=== 批量并行委托 ===")
-    print("=" * 50)
-
-    from agentforge.delegation.config import TaskSpec
+    print_section("批量并行委托")
 
     tasks = [
         TaskSpec(goal="简要介绍 Python 编程语言"),
@@ -69,7 +53,12 @@ def demo_batch_delegation(manager: DelegationManager):
         print(f"  {i + 1}. {t.goal}")
 
     print("\n执行策略: PARALLEL")
-    result = manager.delegate_batch(tasks, strategy=DelegationStrategy.PARALLEL)
+    print(f"最大并发: {config.delegation.max_concurrent}")
+
+    result = manager.delegate_batch(
+        tasks,
+        strategy=DelegationStrategy.PARALLEL,
+    )
 
     print(f"\n状态: {result.status.value}")
     print(f"总耗时: {result.total_duration:.2f}s")
@@ -91,28 +80,29 @@ def main():
     print("AgentForge 委托系统演示")
     print("=" * 50)
 
-    # 检查 Ollama
-    if not check_ollama():
-        print("\n❌ 错误: Ollama 服务未运行")
-        print("请先启动 Ollama: ollama serve")
-        sys.exit(1)
+    # 加载配置
+    config = get_config()
 
-    print("\n✅ Ollama 服务已连接")
+    # 设置 Demo 环境
+    agent, config = setup_demo()
+    print(f"📦 主 Agent, 模型: {config.ollama.model}")
 
-    # 创建主 Agent
-    provider = OllamaProvider(model="llama3.2")
-    agent = Agent(provider=provider)
-    print(f"\n📦 主 Agent, 模型: {provider._model}")
-
-    # 创建委托管理器
-    manager = DelegationManager(parent_agent=agent)
+    # 创建委托管理器（使用配置）
+    delegation_config = DelegationConfig(
+        max_depth=config.delegation.max_depth,
+        max_concurrent=config.delegation.max_concurrent,
+    )
+    manager = DelegationManager(
+        config=delegation_config,
+        parent_agent=agent,
+    )
     print("✅ 委托管理器已创建")
 
     # 演示单任务委托
     demo_single_delegation(manager)
 
     # 演示批量并行委托
-    demo_batch_delegation(manager)
+    demo_batch_delegation(manager, config)
 
     print("\n" + "=" * 50)
     print("✅ 委托系统演示完成")

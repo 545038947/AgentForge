@@ -8,6 +8,7 @@ AgentForge 框架完整功能演示，验证核心功能可用性。
 - ✅ **工具调用** - 自定义工具定义和执行
 - ✅ **记忆系统** - 跨会话记忆持久化和恢复
 - ✅ **委托系统** - 子 Agent 创建和并行委托
+- ✅ **配置管理** - YAML 配置文件支持
 
 ## 前置要求
 
@@ -22,6 +23,41 @@ ollama serve
 ollama pull llama3.2
 ```
 
+## 配置
+
+Demo 使用 YAML 配置文件管理设置。复制并编辑 `config.yaml`：
+
+```bash
+cp config.yaml config.local.yaml
+# 编辑 config.local.yaml 或直接修改 config.yaml
+```
+
+### 配置文件说明
+
+```yaml
+# Ollama 服务配置
+ollama:
+  base_url: "http://localhost:11434/v1"  # 服务地址
+  model: "llama3.2"                       # 默认模型
+  timeout: 600                            # 请求超时（秒）
+
+# Agent 配置
+agent:
+  system_prompt: ""                       # 系统提示（可选）
+  max_tokens: 4096                        # 最大 Token 数
+  temperature: 0.7                        # 温度
+
+# 记忆系统配置
+memory:
+  store_path: "./memory_store"            # 存储路径
+  auto_extract: false                     # 自动提取
+
+# 委托系统配置
+delegation:
+  max_concurrent: 3                       # 最大并发数
+  max_depth: 2                            # 最大深度
+```
+
 ## 运行方式
 
 ### 主 REPL
@@ -31,8 +67,9 @@ cd demo
 python run_repl.py
 ```
 
-可选参数：
+可选参数（覆盖配置文件）：
 ```bash
+python run_repl.py --config my_config.yaml
 python run_repl.py --model llama3.1
 python run_repl.py --base-url http://192.168.1.100:11434/v1
 ```
@@ -61,6 +98,7 @@ python scenarios/04_delegation.py
 | `/tools` | 列出可用工具 |
 | `/clear` | 清空对话历史 |
 | `/info` | 显示 Agent 信息 |
+| `/config` | 显示当前配置 |
 | `/quit` | 退出 REPL |
 
 ## 工具列表
@@ -83,4 +121,25 @@ python scenarios/04_delegation.py
 
 👤 你: 北京今天天气怎么样？
 🤖 Agent: [调用 get_weather 工具] 北京今天天气晴朗，温度 25°C...
+```
+
+## 目录结构
+
+```
+demo/
+├── __init__.py          # 包初始化
+├── config.py            # 配置管理模块
+├── config.yaml          # 默认配置文件
+├── utils.py             # 公共工具函数
+├── run_repl.py          # 主交互式 REPL
+├── README.md            # 使用说明
+├── tools/               # 自定义工具
+│   ├── __init__.py
+│   └── demo_tools.py
+└── scenarios/           # 场景演示脚本
+    ├── __init__.py
+    ├── 01_streaming.py
+    ├── 02_tools.py
+    ├── 03_memory.py
+    └── 04_delegation.py
 ```
