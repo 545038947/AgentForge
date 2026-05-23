@@ -67,3 +67,15 @@ Thumbs.db
 
 # Reference code (hermes-agent is for reference only)
 hermes-agent/
+
+# Demo generated files
+demo/memory_store/
+
+# Documentation site (generated)
+site/
+
+# Sessions demo data
+sessions_demo/
+
+# Accidentally installed packages
+Projectsnovel/
