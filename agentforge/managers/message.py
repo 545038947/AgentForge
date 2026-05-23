@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from typing import TYPE_CHECKING, List, Optional
 
 from agentforge.types import (
@@ -66,6 +67,7 @@ class MessageManager:
         """
         self._settings = settings
         self._messages: List[Message] = []
+        self._lock = threading.Lock()
         self._compressor = compressor
         self._memory = memory
 
@@ -140,12 +142,14 @@ class MessageManager:
         Args:
             message: 消息对象
         """
-        self._messages.append(message)
+        with self._lock:
+            self._messages.append(message)
+            msg_count = len(self._messages)
 
-        # 持久化到存储
+        # 持久化到存储（不持锁，避免死锁）
         if self._memory:
             try:
-                self._memory.save(f"msg_{len(self._messages)}", message)
+                self._memory.save(f"msg_{msg_count}", message)
             except (OSError, IOError) as e:
                 logger.warning(f"保存消息到存储失败: {e}")
 
@@ -226,7 +230,8 @@ class MessageManager:
         Returns:
             消息列表
         """
-        return self._messages.copy()
+        with self._lock:
+            return self._messages.copy()
 
     def get_context(self) -> List[Message]:
         """获取当前上下文（可能压缩）。
@@ -238,10 +243,17 @@ class MessageManager:
         """
         if self._compressor:
             # 检查是否需要压缩
-            if self._compressor.should_compress(self._messages):
-                self._messages = self._compressor.compress(self._messages)
+            with self._lock:
+                should_compress = self._compressor.should_compress(self._messages)
+                snapshot = self._messages.copy()
+            if should_compress:
+                # 压缩操作不持锁，避免死锁
+                compressed = self._compressor.compress(snapshot)
+                with self._lock:
+                    self._messages = compressed
 
-        messages = self._messages.copy()
+        with self._lock:
+            messages = self._messages.copy()
 
         # 添加系统提示作为第一条消息
         system_prompt = self.get_system_prompt()
@@ -256,12 +268,15 @@ class MessageManager:
 
     def clear(self) -> None:
         """清空消息历史。"""
-        self._messages.clear()
+        with self._lock:
+            self._messages.clear()
 
     def __len__(self) -> int:
         """返回消息数量。"""
-        return len(self._messages)
+        with self._lock:
+            return len(self._messages)
 
     def __iter__(self):
         """迭代消息。"""
-        return iter(self._messages)
+        with self._lock:
+            return iter(self._messages.copy())
