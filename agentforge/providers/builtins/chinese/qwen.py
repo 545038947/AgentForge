@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterator, List, Optional
 from agentforge.providers.base import Provider, ProviderCapabilities
 from agentforge.providers.transports import ChatCompletionsTransport
 from agentforge.types import NormalizedResponse, Usage
+from agentforge.types.errors import ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,11 @@ class QwenProvider(Provider):
         **kwargs,
     ) -> Iterator[Any]:
         """执行流式 API 调用。"""
-        yield {"content": "这是一个通义千问模拟响应。", "model": self._model}
+        raise ProviderError(
+            "通义千问 SDK 未安装或 API 密钥未配置，无法调用 API。"
+            "请安装 openai 包（pip install openai）并配置有效的 API 密钥。",
+            provider=self.name,
+        )
 
     def stream(
         self,
@@ -96,7 +101,11 @@ class QwenProvider(Provider):
         **kwargs,
     ) -> Iterator[NormalizedResponse]:
         """流式调用 API。"""
-        yield self._mock_response()
+        raise ProviderError(
+            "通义千问 SDK 未安装或 API 密钥未配置，无法调用 API。"
+            "请安装 openai 包（pip install openai）并配置有效的 API 密钥。",
+            provider=self.name,
+        )
 
     def complete(
         self,
@@ -110,11 +119,11 @@ class QwenProvider(Provider):
         return NormalizedResponse(content="")
 
     def _mock_response(self) -> NormalizedResponse:
-        """模拟响应。"""
-        return NormalizedResponse(
-            content="这是一个通义千问模拟响应。",
-            model=self._model,
-            usage=Usage(prompt_tokens=10, completion_tokens=20),
+        """模拟响应（已弃用，保留接口兼容）。"""
+        raise ProviderError(
+            "通义千问 SDK 未安装或 API 密钥未配置，无法调用 API。"
+            "请安装 openai 包（pip install openai）并配置有效的 API 密钥。",
+            provider=self.name,
         )
 
     def to_dict(self) -> Dict[str, Any]:

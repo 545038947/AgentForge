@@ -99,60 +99,12 @@ class OpenAIProvider(Provider):
             原生响应块
         """
         if self._client is None:
-            # SDK 未安装或 API 密钥未配置，返回模拟响应
-            logger.warning("OpenAI SDK 未安装或 API 密钥未配置，使用模拟响应")
-            # 创建一个模拟的 SDK 响应对象
-            from dataclasses import dataclass
-
-            @dataclass
-            class MockFunction:
-                name: str = ""
-                arguments: str = ""
-
-            @dataclass
-            class MockToolCall:
-                id: str = ""
-                function: MockFunction = None
-
-                def __post_init__(self):
-                    if self.function is None:
-                        self.function = MockFunction()
-
-            @dataclass
-            class MockMessage:
-                content: str = ""
-                tool_calls: list = None
-
-                def __post_init__(self):
-                    if self.tool_calls is None:
-                        self.tool_calls = []
-
-            @dataclass
-            class MockChoice:
-                message: MockMessage
-                finish_reason: str = "stop"
-
-            @dataclass
-            class MockUsage:
-                prompt_tokens: int = 10
-                completion_tokens: int = 20
-                total_tokens: int = 30
-
-            @dataclass
-            class MockResponse:
-                choices: list
-                model: str
-                usage: MockUsage = None
-
-                def __post_init__(self):
-                    if self.usage is None:
-                        self.usage = MockUsage()
-
-            yield MockResponse(
-                choices=[MockChoice(message=MockMessage(content="这是一个模拟响应（SDK 未安装或密钥未配置）。"))],
-                model=self._model,
+            # SDK 未安装或 API 密钥未配置，抛出异常而非静默降级
+            raise ProviderError(
+                "OpenAI SDK 未安装或 API 密钥未配置，无法调用 API。"
+                "请安装 openai 包（pip install openai）并配置有效的 API 密钥。",
+                provider=self.name,
             )
-            return
 
         try:
             # 构建请求参数

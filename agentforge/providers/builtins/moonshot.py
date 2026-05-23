@@ -106,13 +106,12 @@ class MoonshotProvider(Provider):
             原生响应块
         """
         if self._client is None:
-            logger.warning("Moonshot SDK 未安装或 API 密钥未配置，使用模拟响应")
-            yield {
-                "content": "这是一个模拟响应（SDK 未安装或密钥未配置）。",
-                "model": self._model,
-                "finish_reason": "stop",
-            }
-            return
+            # SDK 未安装或 API 密钥未配置，抛出异常而非静默降级
+            raise ProviderError(
+                "Moonshot SDK 未安装或 API 密钥未配置，无法调用 API。"
+                "请安装 openai 包（pip install openai）并配置有效的 API 密钥。",
+                provider=self.name,
+            )
 
         try:
             # 构建请求参数
