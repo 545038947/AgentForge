@@ -248,6 +248,11 @@ class Agent:
         self._rate_limit_state: Optional[Dict[str, Any]] = None
         self._api_call_count: int = 0
 
+        # 指标收集器
+        from agentforge.metrics.collector import MetricsCollector
+        self._metrics_collector = MetricsCollector()
+        self._metrics_collector.bind(self._event_dispatcher)
+
         # atexit 钩子注册
         self._atexit_registered: bool = False
         if register_atexit:
@@ -1540,6 +1545,11 @@ class Agent:
             }
         except (KeyError, TypeError, ValueError):
             pass
+
+    @property
+    def metrics(self):
+        """获取指标收集器。"""
+        return self._metrics_collector
 
     def get_activity_summary(self) -> Dict[str, Any]:
         """返回 Agent 当前活动状态摘要（用于诊断）。
