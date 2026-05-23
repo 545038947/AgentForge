@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 from typing import List
 
-from agentforge import tool
+from hai_agent import tool
 
 
 @tool

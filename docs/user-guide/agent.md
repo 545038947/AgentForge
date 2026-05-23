@@ -5,7 +5,7 @@
 ### 简单方式
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 # 自动选择 Provider
 agent = Agent(model="gpt-4")
@@ -14,8 +14,8 @@ agent = Agent(model="gpt-4")
 ### 完整方式
 
 ```python
-from agentforge import Agent
-from agentforge.providers import OpenAIProvider
+from hai_agent import Agent
+from hai_agent.providers import OpenAIProvider
 
 provider = OpenAIProvider(
     api_key="sk-xxx",
@@ -61,7 +61,7 @@ agent.clear()
 ## 配置
 
 ```python
-from agentforge import Agent, Settings
+from hai_agent import Agent, Settings
 
 settings = Settings(
     max_iterations=10,

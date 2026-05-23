@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 项目概述
-本项目 AgentForge 是一个独立、可复用的 Agent 框架库，从 hermes-agent 的成熟架构中提取并重构，为其他应用提供：
+本项目 HAI-Agent 是一个独立、可复用的 Agent 框架库，从 hermes-agent 的成熟架构中提取并重构，为其他应用提供：
 
 - **便捷的高层 API**：应用开发者可快速构建 Agent 应用
 - **灵活的扩展点**：框架开发者可定制 Provider、Tool、Memory 等组件

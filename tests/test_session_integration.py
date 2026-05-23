@@ -6,15 +6,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentforge.agent import Agent
-from agentforge.session import (
+from hai_agent.agent import Agent
+from hai_agent.session import (
     SessionProvider,
     InMemorySessionProvider,
     FileBasedSessionProvider,
     SessionInfo,
     MessageRecord,
 )
-from agentforge.types import NormalizedResponse, Usage
+from hai_agent.types import NormalizedResponse, Usage
 
 
 class TestInMemorySessionProvider:
@@ -231,7 +231,7 @@ class TestAgentSessionIntegration:
         # 验证会话已创建
         session = session_provider.get_session("test-session")
         assert session is not None
-        assert session.source == "agentforge"
+        assert session.source == "hai_agent"
 
         # 运行对话
         response = agent.run("你好")

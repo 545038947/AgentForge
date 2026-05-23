@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 import base64
 import io
 
-from agentforge.types import Message, ImageContent, TextContent
-from agentforge.core.execution import ExecutionEngine, ExecutionConfig
-from agentforge.delegation.manager import DelegationManager
-from agentforge.delegation.config import DelegationConfig, TaskSpec
-from agentforge.tools.toolsets import register_toolset, ToolsetDefinition, _global_registry
+from hai_agent.types import Message, ImageContent, TextContent
+from hai_agent.core.execution import ExecutionEngine, ExecutionConfig
+from hai_agent.delegation.manager import DelegationManager
+from hai_agent.delegation.config import DelegationConfig, TaskSpec
+from hai_agent.tools.toolsets import register_toolset, ToolsetDefinition, _global_registry
 
 
 class TestImageShrink:

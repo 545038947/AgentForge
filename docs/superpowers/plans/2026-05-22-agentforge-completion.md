@@ -47,7 +47,7 @@
 ## 文件结构
 
 ```
-agentforge/
+hai_agent/
 ├── tools/
 │   └── toolsets.py          # 新增：工具集定义
 ├── session/
@@ -71,7 +71,7 @@ agentforge/
 ## Task 1: 工具集系统 - ToolsetDefinition
 
 **Files:**
-- Create: `agentforge/tools/toolsets.py`
+- Create: `hai_agent/tools/toolsets.py`
 - Test: `tests/test_toolsets.py`
 
 - [ ] **Step 1: Write the failing test for ToolsetDefinition**
@@ -84,7 +84,7 @@ import pytest
 import os
 from unittest.mock import patch
 
-from agentforge.tools.toolsets import (
+from hai_agent.tools.toolsets import (
     ToolsetDefinition,
     ToolsetRegistry,
     register_toolset,
@@ -151,7 +151,7 @@ Expected: FAIL with "No module named 'agentforge.tools.toolsets'"
 - [ ] **Step 3: Write ToolsetDefinition implementation**
 
 ```python
-# agentforge/tools/toolsets.py
+# hai_agent/tools/toolsets.py
 """工具集系统。
 
 支持工具分组和条件启用，参考 hermes-agent/toolsets.py 实现。
@@ -421,7 +421,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agentforge/tools/toolsets.py tests/test_toolsets.py
+git add hai_agent/tools/toolsets.py tests/test_toolsets.py
 git commit -m "feat: 添加工具集系统 (ToolsetDefinition, ToolsetRegistry)"
 ```
 
@@ -546,9 +546,9 @@ git commit -m "test: 添加 ToolsetRegistry 测试"
 ## Task 3: 会话管理 - SessionProvider 接口
 
 **Files:**
-- Create: `agentforge/session/__init__.py`
-- Create: `agentforge/session/base.py`
-- Create: `agentforge/session/info.py`
+- Create: `hai_agent/session/__init__.py`
+- Create: `hai_agent/session/base.py`
+- Create: `hai_agent/session/info.py`
 - Test: `tests/test_session.py`
 
 - [ ] **Step 1: Write the failing test for SessionProvider**
@@ -560,7 +560,7 @@ git commit -m "test: 添加 ToolsetRegistry 测试"
 import pytest
 import time
 
-from agentforge.session import (
+from hai_agent.session import (
     SessionProvider,
     SessionInfo,
     MessageRecord,
@@ -714,12 +714,12 @@ Expected: FAIL with "No module named 'agentforge.session'"
 - [ ] **Step 3: Write SessionProvider implementation**
 
 ```python
-# agentforge/session/__init__.py
+# hai_agent/session/__init__.py
 """会话管理模块。"""
 
-from agentforge.session.base import SessionProvider
-from agentforge.session.info import SessionInfo, MessageRecord
-from agentforge.session.builtins.in_memory import InMemorySessionProvider
+from hai_agent.session.base import SessionProvider
+from hai_agent.session.info import SessionInfo, MessageRecord
+from hai_agent.session.builtins.in_memory import InMemorySessionProvider
 
 __all__ = [
     "SessionProvider",
@@ -730,7 +730,7 @@ __all__ = [
 ```
 
 ```python
-# agentforge/session/base.py
+# hai_agent/session/base.py
 """SessionProvider 抽象基类。"""
 
 from __future__ import annotations
@@ -740,7 +740,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from agentforge.session.info import SessionInfo, MessageRecord
+from hai_agent.session.info import SessionInfo, MessageRecord
 
 logger = logging.getLogger(__name__)
 
@@ -989,7 +989,7 @@ class SessionProvider(ABC):
 ```
 
 ```python
-# agentforge/session/info.py
+# hai_agent/session/info.py
 """会话信息数据结构。"""
 
 from __future__ import annotations
@@ -1083,16 +1083,16 @@ class MessageRecord:
 ```
 
 ```python
-# agentforge/session/builtins/__init__.py
+# hai_agent/session/builtins/__init__.py
 """内置会话提供者。"""
 
-from agentforge.session.builtins.in_memory import InMemorySessionProvider
+from hai_agent.session.builtins.in_memory import InMemorySessionProvider
 
 __all__ = ["InMemorySessionProvider"]
 ```
 
 ```python
-# agentforge/session/builtins/in_memory.py
+# hai_agent/session/builtins/in_memory.py
 """内存会话提供者。"""
 
 from __future__ import annotations
@@ -1102,8 +1102,8 @@ import threading
 import time
 from typing import Any, Dict, List, Optional
 
-from agentforge.session.base import SessionProvider
-from agentforge.session.info import SessionInfo, MessageRecord
+from hai_agent.session.base import SessionProvider
+from hai_agent.session.info import SessionInfo, MessageRecord
 
 logger = logging.getLogger(__name__)
 
@@ -1246,7 +1246,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agentforge/session/ tests/test_session.py
+git add hai_agent/session/ tests/test_session.py
 git commit -m "feat: 添加会话管理系统 (SessionProvider, SessionInfo, MessageRecord)"
 ```
 
@@ -1255,7 +1255,7 @@ git commit -m "feat: 添加会话管理系统 (SessionProvider, SessionInfo, Mes
 ## Task 4: Agent 活动追踪
 
 **Files:**
-- Modify: `agentforge/agent.py`
+- Modify: `hai_agent/agent.py`
 - Test: `tests/test_p4_agent.py`
 
 - [ ] **Step 1: Write the failing test for activity tracking**
@@ -1269,8 +1269,8 @@ class TestAgentActivityTracking:
     def test_activity_timestamp(self):
         """测试活动时间戳更新。"""
         import time
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
         
         provider = OpenAIProvider(api_key="test-key")
         agent = Agent(provider=provider)
@@ -1291,8 +1291,8 @@ class TestAgentActivityTracking:
 
     def test_activity_summary(self):
         """测试活动摘要。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
         
         provider = OpenAIProvider(api_key="test-key")
         agent = Agent(provider=provider)
@@ -1310,8 +1310,8 @@ class TestAgentActivityTracking:
 
     def test_rate_limit_state(self):
         """测试速率限制状态。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
         
         provider = OpenAIProvider(api_key="test-key")
         agent = Agent(provider=provider)
@@ -1338,7 +1338,7 @@ Expected: FAIL with "AttributeError: 'Agent' object has no attribute '_touch_act
 
 - [ ] **Step 3: Add activity tracking to Agent**
 
-在 `agentforge/agent.py` 中添加活动追踪相关代码：
+在 `hai_agent/agent.py` 中添加活动追踪相关代码：
 
 ```python
 # 在 Agent.__init__ 中添加（约第 170 行后）
@@ -1405,7 +1405,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agentforge/agent.py tests/test_p4_agent.py
+git add hai_agent/agent.py tests/test_p4_agent.py
 git commit -m "feat: 添加 Agent 活动追踪 (_last_activity_ts, get_activity_summary)"
 ```
 
@@ -1414,7 +1414,7 @@ git commit -m "feat: 添加 Agent 活动追踪 (_last_activity_ts, get_activity_
 ## Task 5: EventType 扩展
 
 **Files:**
-- Modify: `agentforge/events/types.py`
+- Modify: `hai_agent/events/types.py`
 - Test: `tests/test_p2_interrupt_events.py`
 
 - [ ] **Step 1: Write the failing test for new event types**
@@ -1427,42 +1427,42 @@ class TestExtendedEventTypes:
 
     def test_agent_thinking_event(self):
         """测试 AGENT_THINKING 事件。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
         
         assert hasattr(EventType, "AGENT_THINKING")
         assert EventType.AGENT_THINKING == "agent.thinking"
 
     def test_agent_reasoning_event(self):
         """测试 AGENT_REASONING 事件。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
         
         assert hasattr(EventType, "AGENT_REASONING")
         assert EventType.AGENT_REASONING == "agent.reasoning"
 
     def test_tool_progress_event(self):
         """测试 TOOL_PROGRESS 事件。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
         
         assert hasattr(EventType, "TOOL_PROGRESS")
         assert EventType.TOOL_PROGRESS == "tool.progress"
 
     def test_stream_delta_event(self):
         """测试 STREAM_DELTA 事件。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
         
         assert hasattr(EventType, "STREAM_DELTA")
         assert EventType.STREAM_DELTA == "stream.delta"
 
     def test_clarify_request_event(self):
         """测试 CLARIFY_REQUEST 事件。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
         
         assert hasattr(EventType, "CLARIFY_REQUEST")
         assert EventType.CLARIFY_REQUEST == "clarify.request"
 
     def test_all_new_event_types(self):
         """测试所有新增事件类型。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
         
         new_types = [
             "AGENT_THINKING",
@@ -1493,7 +1493,7 @@ Expected: FAIL with "AssertionError: False is not true : Missing EventType.AGENT
 - [ ] **Step 3: Extend EventType**
 
 ```python
-# 修改 agentforge/events/types.py
+# 修改 hai_agent/events/types.py
 
 class EventType:
     """事件类型常量。"""
@@ -1549,7 +1549,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add agentforge/events/types.py tests/test_p2_interrupt_events.py
+git add hai_agent/events/types.py tests/test_p2_interrupt_events.py
 git commit -m "feat: 扩展 EventType（AGENT_THINKING, TOOL_PROGRESS 等）"
 ```
 
@@ -1558,8 +1558,8 @@ git commit -m "feat: 扩展 EventType（AGENT_THINKING, TOOL_PROGRESS 等）"
 ## Task 6: 模型能力系统
 
 **Files:**
-- Create: `agentforge/core/model_metadata.py`
-- Modify: `agentforge/utils/model_metadata.py`
+- Create: `hai_agent/core/model_metadata.py`
+- Modify: `hai_agent/utils/model_metadata.py`
 - Test: `tests/test_model_metadata.py`
 
 - [ ] **Step 1: Write the failing test for ModelCapabilities**
@@ -1570,7 +1570,7 @@ git commit -m "feat: 扩展 EventType（AGENT_THINKING, TOOL_PROGRESS 等）"
 
 import pytest
 
-from agentforge.core.model_metadata import (
+from hai_agent.core.model_metadata import (
     ModelCapabilities,
     DefaultModelMetadataProvider,
 )
@@ -1669,7 +1669,7 @@ Expected: FAIL with "No module named 'agentforge.core.model_metadata'"
 - [ ] **Step 3: Write ModelCapabilities implementation**
 
 ```python
-# agentforge/core/model_metadata.py
+# hai_agent/core/model_metadata.py
 """模型能力系统。
 
 提供 Provider 声明和查询模型特性的机制。
@@ -1876,9 +1876,9 @@ __all__ = [
 - [ ] **Step 4: Update core/__init__.py**
 
 ```python
-# 在 agentforge/core/__init__.py 中添加
+# 在 hai_agent/core/__init__.py 中添加
 
-from agentforge.core.model_metadata import (
+from hai_agent.core.model_metadata import (
     ModelCapabilities,
     ModelMetadataProvider,
     DefaultModelMetadataProvider,
@@ -1902,7 +1902,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add agentforge/core/model_metadata.py agentforge/core/__init__.py tests/test_model_metadata.py
+git add hai_agent/core/model_metadata.py hai_agent/core/__init__.py tests/test_model_metadata.py
 git commit -m "feat: 添加模型能力系统 (ModelCapabilities, DefaultModelMetadataProvider)"
 ```
 
@@ -1911,15 +1911,15 @@ git commit -m "feat: 添加模型能力系统 (ModelCapabilities, DefaultModelMe
 ## Task 7: 更新 __init__.py 导出
 
 **Files:**
-- Modify: `agentforge/__init__.py`
+- Modify: `hai_agent/__init__.py`
 
 - [ ] **Step 1: Update main __init__.py**
 
 ```python
-# 在 agentforge/__init__.py 中添加新模块导出
+# 在 hai_agent/__init__.py 中添加新模块导出
 
 # 工具集
-from agentforge.tools.toolsets import (
+from hai_agent.tools.toolsets import (
     ToolsetDefinition,
     ToolsetRegistry,
     register_toolset,
@@ -1928,7 +1928,7 @@ from agentforge.tools.toolsets import (
 )
 
 # 会话管理
-from agentforge.session import (
+from hai_agent.session import (
     SessionProvider,
     SessionInfo,
     MessageRecord,
@@ -1936,7 +1936,7 @@ from agentforge.session import (
 )
 
 # 模型能力
-from agentforge.core.model_metadata import (
+from hai_agent.core.model_metadata import (
     ModelCapabilities,
     DefaultModelMetadataProvider,
 )
@@ -1966,13 +1966,13 @@ __all__ = [
 
 - [ ] **Step 2: Verify imports work**
 
-Run: `python -c "from agentforge import ToolsetDefinition, SessionProvider, ModelCapabilities; print('OK')"`
+Run: `python -c "from hai_agent import ToolsetDefinition, SessionProvider, ModelCapabilities; print('OK')"`
 Expected: OK
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add agentforge/__init__.py
+git add hai_agent/__init__.py
 git commit -m "feat: 更新 __init__.py 导出新模块"
 ```
 
@@ -1991,7 +1991,7 @@ git commit -m "feat: 更新 __init__.py 导出新模块"
 
 import pytest
 
-from agentforge import (
+from hai_agent import (
     Agent,
     ToolsetDefinition,
     register_toolset,
@@ -1999,7 +1999,7 @@ from agentforge import (
     ModelCapabilities,
     DefaultModelMetadataProvider,
 )
-from agentforge.providers.builtins import OpenAIProvider
+from hai_agent.providers.builtins import OpenAIProvider
 
 
 class TestIntegration:
@@ -2018,7 +2018,7 @@ class TestIntegration:
         agent = Agent(provider=provider)
         
         # 验证工具集已注册
-        from agentforge.tools.toolsets import get_toolset
+        from hai_agent.tools.toolsets import get_toolset
         toolset = get_toolset("custom")
         assert toolset is not None
 

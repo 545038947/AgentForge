@@ -83,8 +83,8 @@ Expected: 输出 mkdocs 版本号
 site_name: AgentForge
 site_description: 可复用的 Agent 框架库，支持中国大模型
 site_author: AgentForge Team
-repo_url: https://github.com/agentforge/agentforge
-repo_name: agentforge/agentforge
+repo_url: https://github.com/545038947/AgentForge
+repo_name: hai_agent/agentforge
 
 theme:
   name: material
@@ -183,7 +183,7 @@ markdown_extensions:
 ## 快速开始
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 response = agent.run("你好")
@@ -206,17 +206,17 @@ print(response.content)
 
 ```bash
 # 基础安装
-pip install agentforge
+pip install hai-agent
 
 # 安装特定 Provider 支持
-pip install agentforge[openai]
-pip install agentforge[anthropic]
+pip install hai-agent[openai]
+pip install hai-agent[anthropic]
 ```
 
 ## 简单对话
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 response = agent.run("你好，请介绍一下你自己")
@@ -226,7 +226,7 @@ print(response.content)
 ## 流式响应
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 
@@ -238,7 +238,7 @@ for chunk in agent.stream("讲一个故事"):
 ## 添加工具
 
 ```python
-from agentforge import Agent, tool
+from hai_agent import Agent, tool
 
 @tool
 def get_weather(city: str) -> str:
@@ -252,7 +252,7 @@ response = agent.run("北京天气怎么样？")
 ## 使用记忆
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 agent.enable_memory_store("./memories")
@@ -608,7 +608,7 @@ agent.sync()
 ### 简单方式
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 # 自动选择 Provider
 agent = Agent(model="gpt-4")
@@ -617,8 +617,8 @@ agent = Agent(model="gpt-4")
 ### 完整方式
 
 ```python
-from agentforge import Agent
-from agentforge.providers import OpenAIProvider
+from hai_agent import Agent
+from hai_agent.providers import OpenAIProvider
 
 provider = OpenAIProvider(
     api_key="sk-xxx",
@@ -664,7 +664,7 @@ agent.clear()
 ## 配置
 
 ```python
-from agentforge import Agent, Settings
+from hai_agent import Agent, Settings
 
 settings = Settings(
     max_iterations=10,
@@ -685,7 +685,7 @@ agent = Agent(model="gpt-4", settings=settings)
 ### 函数式工具
 
 ```python
-from agentforge import tool
+from hai_agent import tool
 
 @tool
 def search(query: str) -> str:
@@ -703,7 +703,7 @@ def search(query: str) -> str:
 ### 类式工具
 
 ```python
-from agentforge import FunctionTool
+from hai_agent import FunctionTool
 
 class Calculator(FunctionTool):
     name = "calculator"
@@ -716,7 +716,7 @@ class Calculator(FunctionTool):
 ## 使用工具
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4", tools=[search, Calculator()])
 response = agent.run("搜索 Python 教程")
@@ -725,7 +725,7 @@ response = agent.run("搜索 Python 教程")
 ## 工具护栏
 
 ```python
-from agentforge.tools import ToolCallGuardrailController
+from hai_agent.tools import ToolCallGuardrailController
 
 guardrail = ToolCallGuardrailController(
     allowed_tools=["search", "read"],
@@ -744,7 +744,7 @@ agent = Agent(model="gpt-4", tools=[...], guardrails=[guardrail])
 ## 启用记忆
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 agent.enable_memory_store("./memories")
@@ -799,7 +799,7 @@ agent2.run("我叫什么？")  # 会回答 "张三"
 ## 同步流式
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 
@@ -819,7 +819,7 @@ for delta in agent.stream_deltas("讲一个故事"):
 
 ```python
 import asyncio
-from agentforge import Agent
+from hai_agent import Agent
 
 async def main():
     agent = Agent(model="gpt-4")
@@ -850,7 +850,7 @@ for delta in agent.stream_deltas("查天气", suppress_tool_text=True):
 
 ```python
 import asyncio
-from agentforge import Agent
+from hai_agent import Agent
 
 async def main():
     agent = Agent(model="gpt-4")

@@ -3,22 +3,22 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from agentforge.providers.transports.base import (
+from hai_agent.providers.transports.base import (
     Transport,
     register_transport,
     get_transport,
     list_transports,
 )
-from agentforge.providers.transports.chat_completions import ChatCompletionsTransport
-from agentforge.providers.base import Provider, ProviderCapabilities
-from agentforge.providers.registry import (
+from hai_agent.providers.transports.chat_completions import ChatCompletionsTransport
+from hai_agent.providers.base import Provider, ProviderCapabilities
+from hai_agent.providers.registry import (
     ProviderRegistry,
     register_provider,
     get_provider,
     list_providers,
     create_provider,
 )
-from agentforge.types import NormalizedResponse, ToolCall, Usage
+from hai_agent.types import NormalizedResponse, ToolCall, Usage
 
 
 class TestTransportBase:

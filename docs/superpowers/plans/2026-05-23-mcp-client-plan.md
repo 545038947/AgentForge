@@ -13,7 +13,7 @@
 ## 文件结构
 
 ```
-agentforge/mcp/
+hai_agent/mcp/
 ├── __init__.py           # 模块入口，导出公共 API
 ├── types.py              # MCP 类型定义
 ├── config.py             # 配置解析
@@ -34,17 +34,17 @@ agentforge/mcp/
 ### Task 1: MCP 类型定义
 
 **Files:**
-- Create: `agentforge/mcp/__init__.py`
-- Create: `agentforge/mcp/types.py`
-- Create: `agentforge/mcp/errors.py`
+- Create: `hai_agent/mcp/__init__.py`
+- Create: `hai_agent/mcp/types.py`
+- Create: `hai_agent/mcp/errors.py`
 
 - [ ] **Step 1: 创建 MCP 错误类型**
 
 ```python
-# agentforge/mcp/errors.py
+# hai_agent/mcp/errors.py
 """MCP 错误类型。"""
 
-from agentforge.types.errors import AgentForgeError
+from hai_agent.types.errors import AgentForgeError
 
 
 class MCPError(AgentForgeError):
@@ -75,7 +75,7 @@ class MCPConfigError(MCPError):
 - [ ] **Step 2: 创建 MCP 类型定义**
 
 ```python
-# agentforge/mcp/types.py
+# hai_agent/mcp/types.py
 """MCP 类型定义。"""
 
 from dataclasses import dataclass, field
@@ -162,26 +162,26 @@ class MCPResourceContent:
 - [ ] **Step 3: 创建模块入口**
 
 ```python
-# agentforge/mcp/__init__.py
+# hai_agent/mcp/__init__.py
 """MCP (Model Context Protocol) 支持。"""
 
-from agentforge.mcp.types import (
+from hai_agent.mcp.types import (
     MCPToolSchema,
     MCPResourceSchema,
     MCPToolResult,
     MCPResourceContent,
 )
-from agentforge.mcp.errors import (
+from hai_agent.mcp.errors import (
     MCPError,
     MCPConnectionError,
     MCPToolCallError,
     MCPResourceError,
     MCPConfigError,
 )
-from agentforge.mcp.config import MCPConfig, MCPServerConfig
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.tool import MCPTool
-from agentforge.mcp.manager import MCPManager
+from hai_agent.mcp.config import MCPConfig, MCPServerConfig
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.tool import MCPTool
+from hai_agent.mcp.manager import MCPManager
 
 __all__ = [
     # Types
@@ -208,7 +208,7 @@ __all__ = [
 - [ ] **Step 4: 提交**
 
 ```bash
-git add agentforge/mcp/__init__.py agentforge/mcp/types.py agentforge/mcp/errors.py
+git add hai_agent/mcp/__init__.py hai_agent/mcp/types.py hai_agent/mcp/errors.py
 git commit -m "feat(mcp): 添加 MCP 类型和错误定义"
 ```
 
@@ -217,12 +217,12 @@ git commit -m "feat(mcp): 添加 MCP 类型和错误定义"
 ### Task 2: MCP 配置解析
 
 **Files:**
-- Create: `agentforge/mcp/config.py`
+- Create: `hai_agent/mcp/config.py`
 
 - [ ] **Step 1: 创建配置类型**
 
 ```python
-# agentforge/mcp/config.py
+# hai_agent/mcp/config.py
 """MCP 配置解析。"""
 
 import os
@@ -233,7 +233,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from agentforge.mcp.errors import MCPConfigError
+from hai_agent.mcp.errors import MCPConfigError
 
 
 @dataclass
@@ -327,7 +327,7 @@ class MCPConfig:
 - [ ] **Step 2: 提交**
 
 ```bash
-git add agentforge/mcp/config.py
+git add hai_agent/mcp/config.py
 git commit -m "feat(mcp): 添加 MCP 配置解析"
 ```
 
@@ -336,15 +336,15 @@ git commit -m "feat(mcp): 添加 MCP 配置解析"
 ### Task 3: MCP Transport 层
 
 **Files:**
-- Create: `agentforge/mcp/transport.py`
-- Create: `agentforge/mcp/transports/__init__.py`
-- Create: `agentforge/mcp/transports/stdio.py`
-- Create: `agentforge/mcp/transports/http.py`
+- Create: `hai_agent/mcp/transport.py`
+- Create: `hai_agent/mcp/transports/__init__.py`
+- Create: `hai_agent/mcp/transports/stdio.py`
+- Create: `hai_agent/mcp/transports/http.py`
 
 - [ ] **Step 1: 创建 Transport 抽象基类**
 
 ```python
-# agentforge/mcp/transport.py
+# hai_agent/mcp/transport.py
 """MCP Transport 抽象基类。"""
 
 from abc import ABC, abstractmethod
@@ -378,7 +378,7 @@ class MCPTransport(ABC):
 - [ ] **Step 2: 创建 Stdio Transport**
 
 ```python
-# agentforge/mcp/transports/stdio.py
+# hai_agent/mcp/transports/stdio.py
 """Stdio Transport 实现。"""
 
 import asyncio
@@ -386,8 +386,8 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-from agentforge.mcp.transport import MCPTransport
-from agentforge.mcp.errors import MCPConnectionError
+from hai_agent.mcp.transport import MCPTransport
+from hai_agent.mcp.errors import MCPConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -478,7 +478,7 @@ class StdioTransport(MCPTransport):
 - [ ] **Step 3: 创建 HTTP Transport**
 
 ```python
-# agentforge/mcp/transports/http.py
+# hai_agent/mcp/transports/http.py
 """HTTP Transport 实现。"""
 
 import json
@@ -487,8 +487,8 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 
-from agentforge.mcp.transport import MCPTransport
-from agentforge.mcp.errors import MCPConnectionError
+from hai_agent.mcp.transport import MCPTransport
+from hai_agent.mcp.errors import MCPConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -566,11 +566,11 @@ class HTTPTransport(MCPTransport):
 - [ ] **Step 4: 创建 transports 模块入口**
 
 ```python
-# agentforge/mcp/transports/__init__.py
+# hai_agent/mcp/transports/__init__.py
 """MCP Transports。"""
 
-from agentforge.mcp.transports.stdio import StdioTransport
-from agentforge.mcp.transports.http import HTTPTransport
+from hai_agent.mcp.transports.stdio import StdioTransport
+from hai_agent.mcp.transports.http import HTTPTransport
 
 __all__ = ["StdioTransport", "HTTPTransport"]
 ```
@@ -578,7 +578,7 @@ __all__ = ["StdioTransport", "HTTPTransport"]
 - [ ] **Step 5: 提交**
 
 ```bash
-git add agentforge/mcp/transport.py agentforge/mcp/transports/
+git add hai_agent/mcp/transport.py hai_agent/mcp/transports/
 git commit -m "feat(mcp): 添加 MCP Transport 层实现"
 ```
 
@@ -587,22 +587,22 @@ git commit -m "feat(mcp): 添加 MCP Transport 层实现"
 ### Task 4: MCP Client 实现
 
 **Files:**
-- Create: `agentforge/mcp/client.py`
+- Create: `hai_agent/mcp/client.py`
 
 - [ ] **Step 1: 创建 MCPClient**
 
 ```python
-# agentforge/mcp/client.py
+# hai_agent/mcp/client.py
 """MCP Client 实现。"""
 
 import logging
 from typing import List, Optional
 
-from agentforge.mcp.config import MCPServerConfig
-from agentforge.mcp.transport import MCPTransport
-from agentforge.mcp.transports import StdioTransport, HTTPTransport
-from agentforge.mcp.types import MCPToolSchema, MCPResourceSchema, MCPToolResult, MCPResourceContent
-from agentforge.mcp.errors import MCPConnectionError, MCPToolCallError, MCPResourceError
+from hai_agent.mcp.config import MCPServerConfig
+from hai_agent.mcp.transport import MCPTransport
+from hai_agent.mcp.transports import StdioTransport, HTTPTransport
+from hai_agent.mcp.types import MCPToolSchema, MCPResourceSchema, MCPToolResult, MCPResourceContent
+from hai_agent.mcp.errors import MCPConnectionError, MCPToolCallError, MCPResourceError
 
 logger = logging.getLogger(__name__)
 
@@ -742,7 +742,7 @@ class MCPClient:
 - [ ] **Step 2: 提交**
 
 ```bash
-git add agentforge/mcp/client.py
+git add hai_agent/mcp/client.py
 git commit -m "feat(mcp): 添加 MCPClient 实现"
 ```
 
@@ -751,22 +751,22 @@ git commit -m "feat(mcp): 添加 MCPClient 实现"
 ### Task 5: MCPTool 包装器
 
 **Files:**
-- Create: `agentforge/mcp/tool.py`
+- Create: `hai_agent/mcp/tool.py`
 
 - [ ] **Step 1: 创建 MCPTool**
 
 ```python
-# agentforge/mcp/tool.py
+# hai_agent/mcp/tool.py
 """MCP Tool 包装器。"""
 
 import asyncio
 import logging
 from typing import Any, Dict
 
-from agentforge.tools.base import Tool
-from agentforge.types import ToolResult
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.types import MCPToolSchema
+from hai_agent.tools.base import Tool
+from hai_agent.types import ToolResult
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.types import MCPToolSchema
 
 logger = logging.getLogger(__name__)
 
@@ -851,7 +851,7 @@ class MCPTool(Tool):
 - [ ] **Step 2: 提交**
 
 ```bash
-git add agentforge/mcp/tool.py
+git add hai_agent/mcp/tool.py
 git commit -m "feat(mcp): 添加 MCPTool 包装器"
 ```
 
@@ -860,21 +860,21 @@ git commit -m "feat(mcp): 添加 MCPTool 包装器"
 ### Task 6: MCPManager 和 Agent 集成
 
 **Files:**
-- Create: `agentforge/mcp/resource.py`
-- Create: `agentforge/mcp/manager.py`
-- Modify: `agentforge/agent.py`
+- Create: `hai_agent/mcp/resource.py`
+- Create: `hai_agent/mcp/manager.py`
+- Modify: `hai_agent/agent.py`
 
 - [ ] **Step 1: 创建 MCPResourceManager**
 
 ```python
-# agentforge/mcp/resource.py
+# hai_agent/mcp/resource.py
 """MCP Resource 管理。"""
 
 import logging
 from typing import List, Optional
 
-from agentforge.mcp.types import MCPResourceSchema, MCPResourceContent
-from agentforge.mcp.errors import MCPResourceError
+from hai_agent.mcp.types import MCPResourceSchema, MCPResourceContent
+from hai_agent.mcp.errors import MCPResourceError
 
 logger = logging.getLogger(__name__)
 
@@ -921,7 +921,7 @@ class MCPResourceManager:
 - [ ] **Step 2: 创建 MCPManager**
 
 ```python
-# agentforge/mcp/manager.py
+# hai_agent/mcp/manager.py
 """MCP Manager 总管理器。"""
 
 import asyncio
@@ -929,11 +929,11 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from agentforge.mcp.config import MCPConfig, MCPServerConfig
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.tool import MCPTool
-from agentforge.mcp.resource import MCPResourceManager
-from agentforge.mcp.errors import MCPError
+from hai_agent.mcp.config import MCPConfig, MCPServerConfig
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.tool import MCPTool
+from hai_agent.mcp.resource import MCPResourceManager
+from hai_agent.mcp.errors import MCPError
 
 logger = logging.getLogger(__name__)
 
@@ -1021,7 +1021,7 @@ class MCPManager:
 
 - [ ] **Step 3: 更新 Agent 类**
 
-在 `agentforge/agent.py` 中添加 MCP 相关方法：
+在 `hai_agent/agent.py` 中添加 MCP 相关方法：
 
 ```python
 # 在 Agent 类中添加以下方法
@@ -1036,7 +1036,7 @@ def load_mcp_config(self, path: str) -> None:
         agent.load_mcp_config("mcp_servers.yaml")
         # MCP 工具自动可用
     """
-    from agentforge.mcp import MCPManager
+    from hai_agent.mcp import MCPManager
     
     if not hasattr(self, "_mcp_manager") or self._mcp_manager is None:
         self._mcp_manager = MCPManager()
@@ -1106,11 +1106,11 @@ async def close_mcp(self) -> None:
         await self._mcp_manager.stop_all()
 ```
 
-- [ ] **Step 4: 更新 agentforge/__init__.py 导出 MCP**
+- [ ] **Step 4: 更新 hai_agent/__init__.py 导出 MCP**
 
 ```python
-# 在 agentforge/__init__.py 中添加
-from agentforge.mcp import (
+# 在 hai_agent/__init__.py 中添加
+from hai_agent.mcp import (
     MCPManager,
     MCPClient,
     MCPTool,
@@ -1122,7 +1122,7 @@ from agentforge.mcp import (
 - [ ] **Step 5: 提交**
 
 ```bash
-git add agentforge/mcp/resource.py agentforge/mcp/manager.py agentforge/agent.py agentforge/__init__.py
+git add hai_agent/mcp/resource.py hai_agent/mcp/manager.py hai_agent/agent.py hai_agent/__init__.py
 git commit -m "feat(mcp): 添加 MCPManager 并集成到 Agent"
 ```
 
@@ -1172,8 +1172,8 @@ if sys.platform == "win32":
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 from demo.config import get_config
 
 

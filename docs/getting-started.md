@@ -4,17 +4,17 @@
 
 ```bash
 # 基础安装
-pip install agentforge
+pip install hai-agent
 
 # 安装特定 Provider 支持
-pip install agentforge[openai]
-pip install agentforge[anthropic]
+pip install hai-agent[openai]
+pip install hai-agent[anthropic]
 ```
 
 ## 简单对话
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 response = agent.run("你好，请介绍一下你自己")
@@ -24,7 +24,7 @@ print(response.content)
 ## 流式响应
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 
@@ -36,7 +36,7 @@ for chunk in agent.stream("讲一个故事"):
 ## 添加工具
 
 ```python
-from agentforge import Agent, tool
+from hai_agent import Agent, tool
 
 @tool
 def get_weather(city: str) -> str:
@@ -50,7 +50,7 @@ response = agent.run("北京天气怎么样？")
 ## 使用记忆
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 agent.enable_memory_store("./memories")

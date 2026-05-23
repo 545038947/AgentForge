@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from agentforge.providers.builtins.ollama import OllamaProvider, OLLAMA_DEFAULT_BASE_URL
-from agentforge.providers.profile import OLLAMA_PROFILE
-from agentforge.types import NormalizedResponse
+from hai_agent.providers.builtins.ollama import OllamaProvider, OLLAMA_DEFAULT_BASE_URL
+from hai_agent.providers.profile import OLLAMA_PROFILE
+from hai_agent.types import NormalizedResponse
 
 
 class TestOllamaProvider:
@@ -120,14 +120,14 @@ class TestOllamaProviderRegistry:
 
     def test_provider_registered(self):
         """测试 Provider 已注册。"""
-        from agentforge.providers.registry import ProviderRegistry
+        from hai_agent.providers.registry import ProviderRegistry
 
         assert "ollama" in ProviderRegistry.list()
         assert "local" in ProviderRegistry.list()  # 别名
 
     def test_create_via_registry(self):
         """测试通过注册表创建 Provider。"""
-        from agentforge.providers.registry import ProviderRegistry
+        from hai_agent.providers.registry import ProviderRegistry
 
         # Ollama 不需要 API Key，但需要显式传递以避免 None 覆盖默认值
         provider = ProviderRegistry.create("ollama", api_key="ollama", model="llama3.2")
@@ -135,7 +135,7 @@ class TestOllamaProviderRegistry:
 
     def test_create_via_alias(self):
         """测试通过别名创建 Provider。"""
-        from agentforge.providers.registry import ProviderRegistry
+        from hai_agent.providers.registry import ProviderRegistry
 
         # Ollama 不需要 API Key，但需要显式传递以避免 None 覆盖默认值
         provider = ProviderRegistry.create("local", api_key="ollama", model="gemma2")

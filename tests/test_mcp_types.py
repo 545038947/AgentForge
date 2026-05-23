@@ -2,9 +2,9 @@
 
 import pytest
 
-from agentforge.mcp.types import MCPToolSchema, MCPResourceSchema, MCPToolResult, MCPResourceContent
-from agentforge.mcp.errors import MCPError, MCPConnectionError, MCPToolCallError, MCPResourceError, MCPConfigError
-from agentforge.types.errors import AgentForgeError
+from hai_agent.mcp.types import MCPToolSchema, MCPResourceSchema, MCPToolResult, MCPResourceContent
+from hai_agent.mcp.errors import MCPError, MCPConnectionError, MCPToolCallError, MCPResourceError, MCPConfigError
+from hai_agent.types.errors import AgentForgeError
 
 
 # ── MCPToolSchema 测试 ──────────────────────────────────────

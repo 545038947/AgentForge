@@ -6,9 +6,9 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from agentforge.memory import MemoryProvider, InMemoryProvider, FileBasedProvider
-from agentforge.skills import Skill, SkillRegistry, SkillLoader
-from agentforge.skills.base import SkillMetadata, FunctionSkill
+from hai_agent.memory import MemoryProvider, InMemoryProvider, FileBasedProvider
+from hai_agent.skills import Skill, SkillRegistry, SkillLoader
+from hai_agent.skills.base import SkillMetadata, FunctionSkill
 
 
 # ── Memory 测试 ──────────────────────────────────────────────

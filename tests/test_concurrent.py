@@ -6,10 +6,10 @@ import threading
 import pytest
 from unittest.mock import MagicMock
 
-from agentforge import Agent
-from agentforge.types import NormalizedResponse
-from agentforge.managers.message import MessageManager
-from agentforge.config.settings import Settings
+from hai_agent import Agent
+from hai_agent.types import NormalizedResponse
+from hai_agent.managers.message import MessageManager
+from hai_agent.config.settings import Settings
 
 
 def _make_mock_provider():

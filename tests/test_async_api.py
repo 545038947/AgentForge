@@ -4,11 +4,11 @@ import asyncio
 import pytest
 from unittest.mock import MagicMock, patch
 
-from agentforge.agent import Agent
-from agentforge.types import NormalizedResponse, StreamDelta, Usage
-from agentforge.tools import FunctionTool
-from agentforge.tools.executor import ToolExecutor
-from agentforge.delegation.manager import DelegationManager, DelegationStrategy
+from hai_agent.agent import Agent
+from hai_agent.types import NormalizedResponse, StreamDelta, Usage
+from hai_agent.tools import FunctionTool
+from hai_agent.tools.executor import ToolExecutor
+from hai_agent.delegation.manager import DelegationManager, DelegationStrategy
 
 
 class TestAgentAsync:
@@ -179,7 +179,7 @@ class TestDelegationManagerAsync:
     def test_delegate_async(self):
         """测试异步单任务委托。"""
         async def run_test():
-            from agentforge.delegation.config import DelegationConfig
+            from hai_agent.delegation.config import DelegationConfig
 
             # 创建配置
             config = DelegationConfig()
@@ -196,7 +196,7 @@ class TestDelegationManagerAsync:
     def test_delegate_batch_async_sequential(self):
         """测试异步批量委托（顺序策略）。"""
         async def run_test():
-            from agentforge.delegation.config import TaskSpec, DelegationConfig
+            from hai_agent.delegation.config import TaskSpec, DelegationConfig
 
             config = DelegationConfig()
             manager = DelegationManager(config=config)
@@ -221,7 +221,7 @@ class TestAsyncUtils:
 
     def test_to_thread(self):
         """测试 to_thread 函数。"""
-        from agentforge.core.async_utils import to_thread
+        from hai_agent.core.async_utils import to_thread
 
         async def run_test():
             def sync_func(x):
@@ -234,7 +234,7 @@ class TestAsyncUtils:
 
     def test_gather_with_concurrency(self):
         """测试并发限制的 gather。"""
-        from agentforge.core.async_utils import gather_with_concurrency
+        from hai_agent.core.async_utils import gather_with_concurrency
 
         async def run_test():
             async def slow_task(i):
@@ -248,7 +248,7 @@ class TestAsyncUtils:
 
     def test_is_async_context(self):
         """测试异步上下文检测。"""
-        from agentforge.core.async_utils import is_async_context
+        from hai_agent.core.async_utils import is_async_context
 
         # 同步上下文
         assert is_async_context() is False
@@ -261,7 +261,7 @@ class TestAsyncUtils:
 
     def test_async_wrap_decorator(self):
         """测试 async_wrap 装饰器。"""
-        from agentforge.core.async_utils import async_wrap
+        from hai_agent.core.async_utils import async_wrap
 
         @async_wrap
         def sync_function(x):
@@ -279,7 +279,7 @@ class TestAsyncIteratorWrapper:
 
     def test_basic_iteration(self):
         """测试基本迭代。"""
-        from agentforge.core.async_utils import AsyncIteratorWrapper
+        from hai_agent.core.async_utils import AsyncIteratorWrapper
 
         async def run_test():
             sync_iter = iter([1, 2, 3])
@@ -295,7 +295,7 @@ class TestAsyncIteratorWrapper:
 
     def test_empty_iterator(self):
         """测试空迭代器。"""
-        from agentforge.core.async_utils import AsyncIteratorWrapper
+        from hai_agent.core.async_utils import AsyncIteratorWrapper
 
         async def run_test():
             sync_iter = iter([])

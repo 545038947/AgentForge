@@ -125,7 +125,7 @@ from __future__ import annotations
 import os
 from typing import List
 
-from agentforge import tool
+from hai_agent import tool
 
 
 @tool
@@ -348,8 +348,8 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 
 
 def check_ollama() -> bool:
@@ -516,8 +516,8 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 from demo.tools import get_all_demo_tools
 
 
@@ -669,8 +669,8 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 
 
 def check_ollama() -> bool:
@@ -831,9 +831,9 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
-from agentforge.delegation import DelegationManager, DelegationStrategy
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
+from hai_agent.delegation import DelegationManager, DelegationStrategy
 
 
 def check_ollama() -> bool:
@@ -874,7 +874,7 @@ def demo_batch_delegation(manager: DelegationManager):
     print("=== 批量并行委托 ===")
     print("=" * 50)
 
-    from agentforge.delegation.config import TaskSpec
+    from hai_agent.delegation.config import TaskSpec
 
     tasks = [
         TaskSpec(goal="简要介绍 Python 编程语言"),
@@ -978,8 +978,8 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 from demo.tools import get_all_demo_tools
 
 

@@ -18,8 +18,8 @@ if sys.platform == "win32":
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge import Agent
-from agentforge.tools.builtins import FileWriteTool, SaveMemoryTool, QueryMemoryTool
+from hai_agent import Agent
+from hai_agent.tools.builtins import FileWriteTool, SaveMemoryTool, QueryMemoryTool
 from demo.config import reload_config
 from demo.utils import print_section
 
@@ -28,7 +28,7 @@ def create_knowledge_assistant():
     """创建知识管理助手 Agent。"""
     config = reload_config()
 
-    from agentforge.providers.builtins import OllamaProvider
+    from hai_agent.providers.builtins import OllamaProvider
 
     provider = OllamaProvider(
         model=config.ollama.model,

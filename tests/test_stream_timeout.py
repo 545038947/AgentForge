@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from agentforge.providers.stream_timeout import (
+from hai_agent.providers.stream_timeout import (
     StreamTimeoutError, stream_with_timeout,
 )
 

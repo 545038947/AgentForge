@@ -39,7 +39,7 @@ AgentForge 是一个独立、可复用的 Agent 框架库，从 hermes-agent 的
 - **并发模型**：同步 + ThreadPoolExecutor
 - **配置验证**：Pydantic
 - **类型系统**：dataclass + Union 类型
-- **分发**：PyPI 单包 `pip install agentforge`
+- **分发**：PyPI 单包 `pip install hai-agent`
 
 ## 2. 架构设计
 
@@ -68,7 +68,7 @@ AgentForge 是一个独立、可复用的 Agent 框架库，从 hermes-agent 的
 ### 2.2 目录结构
 
 ```
-agentforge/
+hai_agent/
 ├── __init__.py              # 应用开发者 API
 ├── agent.py                 # Agent 核心类
 ├── types/
@@ -167,17 +167,17 @@ agentforge/
 ### 3.1 应用开发者 API
 
 ```python
-# agentforge/__init__.py
+# hai_agent/__init__.py
 
 # 核心
-from agentforge.agent import Agent
-from agentforge.types import (
+from hai_agent.agent import Agent
+from hai_agent.types import (
     Message, ContentBlock, TextContent, ImageContent,
     ToolUseContent, ToolResultContent,
     NormalizedResponse, ToolCall, Usage,
     ToolSpec, ToolResult,
 )
-from agentforge.errors import (
+from hai_agent.errors import (
     AgentForgeError,
     ConfigurationError,
     ProviderError,
@@ -187,19 +187,19 @@ from agentforge.errors import (
 )
 
 # 工具
-from agentforge.tools import tool, ToolExecutor
+from hai_agent.tools import tool, ToolExecutor
 
 # 配置
-from agentforge.config import Settings
+from hai_agent.config import Settings
 
 # 事件
-from agentforge.events import on_event, Event
+from hai_agent.events import on_event, Event
 
 # 中断
-from agentforge.interrupt import InterruptToken
+from hai_agent.interrupt import InterruptToken
 
 # 核心功能
-from agentforge.core import (
+from hai_agent.core import (
     IterationBudget,
     CredentialPool,
     PooledCredential,
@@ -208,34 +208,34 @@ from agentforge.core import (
 )
 
 # 便捷函数
-from agentforge.agent import create_agent, quick_chat
+from hai_agent.agent import create_agent, quick_chat
 ```
 
 ### 3.2 框架开发者 API
 
 ```python
-# agentforge/ext/__init__.py
+# hai_agent/ext/__init__.py
 
 # Provider 扩展
-from agentforge.providers import Provider, ProviderCapabilities
-from agentforge.providers.registry import register_provider, get_provider, list_providers
+from hai_agent.providers import Provider, ProviderCapabilities
+from hai_agent.providers.registry import register_provider, get_provider, list_providers
 
 # Transport 扩展
-from agentforge.providers.transports import Transport
-from agentforge.providers.transports.types import NormalizedResponse, ToolCall
+from hai_agent.providers.transports import Transport
+from hai_agent.providers.transports.types import NormalizedResponse, ToolCall
 
 # Tool 扩展
-from agentforge.tools import Tool, ApprovalCallback, ApprovalDecision
+from hai_agent.tools import Tool, ApprovalCallback, ApprovalDecision
 
 # Memory 扩展
-from agentforge.memory import MemoryProvider
+from hai_agent.memory import MemoryProvider
 
 # Skill 扩展
-from agentforge.skills import Skill
-from agentforge.skills.registry import register_skill, get_skill
+from hai_agent.skills import Skill
+from hai_agent.skills.registry import register_skill, get_skill
 
 # 事件扩展
-from agentforge.events import EventEmitter, EventType
+from hai_agent.events import EventEmitter, EventType
 ```
 
 ### 3.3 使用示例
@@ -243,7 +243,7 @@ from agentforge.events import EventEmitter, EventType
 #### 快速创建 Agent
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4", api_key="...")
 response = agent.run("你好，请帮我分析这段代码")
@@ -252,7 +252,7 @@ response = agent.run("你好，请帮我分析这段代码")
 #### 带工具的 Agent
 
 ```python
-from agentforge import Agent, tool
+from hai_agent import Agent, tool
 
 @tool
 def search_web(query: str) -> str:
@@ -266,8 +266,8 @@ response = agent.run("今天天气怎么样？")
 #### 带子 Agent 委托
 
 ```python
-from agentforge import Agent
-from agentforge.tools.builtins import DelegateTool
+from hai_agent import Agent
+from hai_agent.tools.builtins import DelegateTool
 
 code_reviewer = Agent(
     model="gpt-4",
@@ -286,8 +286,8 @@ response = agent.run("请审查这段代码")
 #### 自定义 Provider
 
 ```python
-from agentforge.ext import Provider, ProviderCapabilities, register_provider
-from agentforge.providers.transports import ChatCompletionsTransport
+from hai_agent.ext import Provider, ProviderCapabilities, register_provider
+from hai_agent.providers.transports import ChatCompletionsTransport
 
 class MyProvider(Provider):
     name = "my_provider"
@@ -2672,11 +2672,11 @@ class Agent:
 
 ```python
 # Provider 注册
-from agentforge.ext import register_provider
+from hai_agent.ext import register_provider
 register_provider("my_provider", MyProvider)
 
 # Skill 注册
-from agentforge.ext import register_skill
+from hai_agent.ext import register_skill
 register_skill("my_skill", MySkill)
 
 # Entry Points 发现（第三方插件）
@@ -3688,7 +3688,7 @@ class SecureApprovalCallback(ApprovalCallback):
 #### P0: 类型系统与配置（预计 2 天）
 
 ```
-agentforge/
+hai_agent/
 ├── types/
 │   ├── __init__.py
 │   ├── messages.py      # Message, ContentBlock, TextContent, ImageContent...
@@ -3710,7 +3710,7 @@ agentforge/
 #### P1: Provider 与 Transport（预计 3 天）
 
 ```
-agentforge/
+hai_agent/
 ├── providers/
 │   ├── __init__.py
 │   ├── base.py          # Provider ABC, ProviderCapabilities
@@ -3740,7 +3740,7 @@ agentforge/
 #### P2: 中断与事件（预计 2 天）
 
 ```
-agentforge/
+hai_agent/
 ├── interrupt/
 │   ├── __init__.py
 │   └── cooperative.py   # InterruptToken, InterruptHandler
@@ -3759,7 +3759,7 @@ agentforge/
 #### P3: 工具系统（预计 3 天）
 
 ```
-agentforge/
+hai_agent/
 └── tools/
     ├── __init__.py
     ├── base.py          # Tool ABC, FunctionTool
@@ -3782,7 +3782,7 @@ agentforge/
 #### P4: Agent 核心与上下文压缩（预计 4 天）
 
 ```
-agentforge/
+hai_agent/
 ├── agent.py             # Agent 门面类（活动追踪、速率限制状态）
 ├── managers/
 │   ├── __init__.py
@@ -3812,7 +3812,7 @@ agentforge/
 #### P5: 托托系统（预计 3 天）
 
 ```
-agentforge/
+hai_agent/
 └── delegation/
     ├── __init__.py
     ├── config.py        # DelegationConfig, IsolationConfig
@@ -3830,7 +3830,7 @@ agentforge/
 #### P6: 存储与技能（预计 3 天）
 
 ```
-agentforge/
+hai_agent/
 ├── memory/
 │   ├── __init__.py
 │   ├── base.py          # MemoryProvider ABC
@@ -3862,7 +3862,7 @@ agentforge/
 #### P7: 内置实现（预计 4 天）
 
 ```
-agentforge/
+hai_agent/
 ├── providers/
 │   ├── client_factory.py    # resolve_provider_client
 │   └── builtins/
@@ -3907,7 +3907,7 @@ agentforge/
 #### P8: 工具函数（预计 1 天）
 
 ```
-agentforge/
+hai_agent/
 └── utils/
     ├── __init__.py
     ├── platform.py      # 跨平台兼容

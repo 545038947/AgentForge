@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentforge"
+name = "hai-agent"
 version = "0.1.0"
 description = "可复用的 Agent 框架库，支持中国大模型"
 readme = "README.md"
@@ -11,6 +11,19 @@ requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "AgentForge Team"}
+]
+keywords = [
+    "agent",
+    "llm",
+    "ai",
+    "framework",
+    "openai",
+    "anthropic",
+    "ollama",
+    "deepseek",
+    "qwen",
+    "moonskip",
+    "hai-agent",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -21,10 +34,15 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "pydantic>=2.0",
     "typing-extensions>=4.0",
+    "pyyaml>=6.0",
+    "requests>=2.28",
+    "httpx>=0.25",
 ]
 
 [project.optional-dependencies]
@@ -41,14 +59,20 @@ docs = [
 ]
 openai = ["openai>=1.0"]
 anthropic = ["anthropic>=0.20"]
-yaml = ["pyyaml>=6.0"]
+prometheus = ["prometheus-client>=0.17"]
+all-providers = [
+    "hai-agent[openai]",
+    "hai-agent[anthropic]",
+]
 
 [project.urls]
-Homepage = "https://github.com/agentforge/agentforge"
-Documentation = "https://agentforge.readthedocs.io"
+Homepage = "https://github.com/545038947/AgentForge"
+Documentation = "https://github.com/545038947/AgentForge#readme"
+Repository = "https://github.com/545038947/AgentForge.git"
+Issues = "https://github.com/545038947/AgentForge/issues"
 
 [tool.setuptools.packages.find]
-include = ["agentforge", "agentforge.*"]
+include = ["hai_agent", "hai_agent.*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -56,3 +80,4 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+asyncio_mode = "auto"

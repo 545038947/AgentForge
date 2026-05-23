@@ -3,11 +3,11 @@
 import pytest
 from dataclasses import dataclass
 
-from agentforge.core.stream_accumulator import (
+from hai_agent.core.stream_accumulator import (
     ToolCallAccumulator,
     StreamAccumulator,
 )
-from agentforge.types import ToolCall, Usage
+from hai_agent.types import ToolCall, Usage
 
 
 @dataclass

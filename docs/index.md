@@ -16,7 +16,7 @@
 ## 快速开始
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 response = agent.run("你好")

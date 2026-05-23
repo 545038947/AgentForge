@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentforge.memory import (
+from hai_agent.memory import (
     MemoryStore,
     MemoryManager,
     MemoryStoreBase,
@@ -19,8 +19,8 @@ from agentforge.memory import (
     DEFAULT_MEMORY_CHAR_LIMIT,
     DEFAULT_USER_CHAR_LIMIT,
 )
-from agentforge.context import ContextCompressor
-from agentforge.types import Message, TextContent, ToolUseContent, ToolResultContent
+from hai_agent.context import ContextCompressor
+from hai_agent.types import Message, TextContent, ToolUseContent, ToolResultContent
 
 
 class TestMemoryMetadata:
@@ -170,7 +170,7 @@ class TestMemoryExtractor:
 
     def test_rule_based_name_extraction(self):
         """测试规则提取：名字。"""
-        from agentforge.memory import RuleBasedExtractor
+        from hai_agent.memory import RuleBasedExtractor
 
         extractor = RuleBasedExtractor()
         memories = extractor.extract("我叫张三", "你好，张三！")
@@ -181,7 +181,7 @@ class TestMemoryExtractor:
 
     def test_rule_based_preference_extraction(self):
         """测试规则提取：偏好。"""
-        from agentforge.memory import RuleBasedExtractor
+        from hai_agent.memory import RuleBasedExtractor
 
         extractor = RuleBasedExtractor()
         memories = extractor.extract("我喜欢使用 Python", "好的，我会用 Python")
@@ -192,7 +192,7 @@ class TestMemoryExtractor:
 
     def test_rule_based_no_extraction(self):
         """测试规则提取：无值得记忆的内容。"""
-        from agentforge.memory import RuleBasedExtractor
+        from hai_agent.memory import RuleBasedExtractor
 
         extractor = RuleBasedExtractor()
         memories = extractor.extract("今天天气怎么样？", "今天天气晴朗。")
@@ -505,7 +505,7 @@ class TestContextCompressorEnhanced:
     def test_simple_compress(self):
         """测试简单压缩。"""
         # 使用较低的 max_tokens 以触发压缩
-        from agentforge.config import CompressionSettings
+        from hai_agent.config import CompressionSettings
         settings = CompressionSettings(max_tokens=5000, threshold_percent=0.5)
         compressor = ContextCompressor(settings=settings)
 
@@ -551,8 +551,8 @@ class TestAgentMemoryIntegration:
 
     def test_enable_memory_store(self):
         """测试 Agent 启用 MemoryStore。"""
-        from agentforge.agent import Agent
-        from agentforge.types import NormalizedResponse
+        from hai_agent.agent import Agent
+        from hai_agent.types import NormalizedResponse
 
         # Mock provider
         mock_provider = MagicMock()
@@ -586,8 +586,8 @@ class TestAgentMemoryIntegration:
 
     def test_memory_persistence_across_sessions(self):
         """测试跨会话的记忆持久化。"""
-        from agentforge.agent import Agent
-        from agentforge.types import NormalizedResponse
+        from hai_agent.agent import Agent
+        from hai_agent.types import NormalizedResponse
 
         mock_provider = MagicMock()
         mock_provider.name = "mock"

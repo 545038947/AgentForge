@@ -19,8 +19,8 @@ _project_root = Path(__file__).parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 from demo.config import DemoConfig, get_config
 
 

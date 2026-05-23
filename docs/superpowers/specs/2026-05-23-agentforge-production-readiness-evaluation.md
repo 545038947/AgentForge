@@ -170,7 +170,7 @@ snapshot = agent.metrics.get_snapshot()
 
 **速率限制使用方式：**
 ```python
-from agentforge.providers.rate_limiter import ProviderRateLimiter, RateLimitConfig
+from hai_agent.providers.rate_limiter import ProviderRateLimiter, RateLimitConfig
 
 limiter = ProviderRateLimiter()
 limiter.configure("openai", RateLimitConfig(
@@ -279,7 +279,7 @@ MCPConnectionPool:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from agentforge.metrics import PrometheusExporter
+from hai_agent.metrics import PrometheusExporter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -294,7 +294,7 @@ async def lifespan(app: FastAPI):
 
 2. **速率限制集成**
 ```python
-from agentforge.providers.rate_limiter import ProviderRateLimiter, RateLimitConfig
+from hai_agent.providers.rate_limiter import ProviderRateLimiter, RateLimitConfig
 
 limiter = ProviderRateLimiter()
 limiter.configure("openai", RateLimitConfig(requests_per_minute=60))
@@ -310,7 +310,7 @@ async def chat(request: ChatRequest, agent: Agent = Depends(get_agent)):
 
 3. **流式超时保护**
 ```python
-from agentforge.providers.stream_timeout import stream_with_timeout
+from hai_agent.providers.stream_timeout import stream_with_timeout
 
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest, agent: Agent = Depends(get_agent)):

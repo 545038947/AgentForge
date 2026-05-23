@@ -3,9 +3,9 @@
 import pytest
 import time
 
-from agentforge.managers import MessageManager, ToolOrchestrator
-from agentforge.context import TokenEstimator, ContextCompressor
-from agentforge.types import (
+from hai_agent.managers import MessageManager, ToolOrchestrator
+from hai_agent.context import TokenEstimator, ContextCompressor
+from hai_agent.types import (
     Message,
     TextContent,
     ToolUseContent,
@@ -14,7 +14,7 @@ from agentforge.types import (
     NormalizedResponse,
     ToolCall,
 )
-from agentforge.config import Settings
+from hai_agent.config import Settings
 
 
 # ── 测试辅助类 ──────────────────────────────────────────────
@@ -275,7 +275,7 @@ class TestContextCompressor:
 
     def test_is_protected(self):
         """测试保护区域检查。"""
-        from agentforge.context.compressor import ProtectionRegion
+        from hai_agent.context.compressor import ProtectionRegion
 
         compressor = ContextCompressor()
         regions = [
@@ -348,8 +348,8 @@ class TestAgentActivityTracking:
 
     def test_activity_timestamp(self):
         """测试活动时间戳更新。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
 
         provider = OpenAIProvider(api_key="test-key")
         settings = Settings(model="gpt-4")
@@ -371,8 +371,8 @@ class TestAgentActivityTracking:
 
     def test_activity_summary(self):
         """测试活动摘要。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
 
         provider = OpenAIProvider(api_key="test-key")
         settings = Settings(model="gpt-4")
@@ -391,8 +391,8 @@ class TestAgentActivityTracking:
 
     def test_rate_limit_state(self):
         """测试速率限制状态。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
 
         provider = OpenAIProvider(api_key="test-key")
         settings = Settings(model="gpt-4")
@@ -417,8 +417,8 @@ class TestAgentActivityTracking:
 
     def test_rate_limit_state_none_response(self):
         """测试空响应不更新速率限制状态。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
 
         provider = OpenAIProvider(api_key="test-key")
         settings = Settings(model="gpt-4")
@@ -432,8 +432,8 @@ class TestAgentActivityTracking:
 
     def test_initial_activity_desc(self):
         """测试初始活动描述。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
 
         provider = OpenAIProvider(api_key="test-key")
         settings = Settings(model="gpt-4")
@@ -444,8 +444,8 @@ class TestAgentActivityTracking:
 
     def test_api_call_count_initial(self):
         """测试 API 调用计数初始值。"""
-        from agentforge.agent import Agent
-        from agentforge.providers.builtins import OpenAIProvider
+        from hai_agent.agent import Agent
+        from hai_agent.providers.builtins import OpenAIProvider
 
         provider = OpenAIProvider(api_key="test-key")
         settings = Settings(model="gpt-4")

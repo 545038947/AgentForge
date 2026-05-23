@@ -3,15 +3,15 @@
 import pytest
 import time
 
-from agentforge.delegation import (
+from hai_agent.delegation import (
     DelegationConfig,
     IsolationConfig,
     DelegationResult,
     DelegationStrategy,
     DelegationManager,
 )
-from agentforge.delegation.config import TaskSpec, DELEGATE_BLOCKED_TOOLS
-from agentforge.delegation.result import (
+from hai_agent.delegation.config import TaskSpec, DELEGATE_BLOCKED_TOOLS
+from hai_agent.delegation.result import (
     DelegationStatus,
     ExitReason,
     TaskResult,

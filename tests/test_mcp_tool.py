@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentforge.mcp.tool import MCPTool
-from agentforge.mcp.types import MCPToolSchema
-from agentforge.types import ToolResult
+from hai_agent.mcp.tool import MCPTool
+from hai_agent.mcp.types import MCPToolSchema
+from hai_agent.types import ToolResult
 
 
 @pytest.fixture(autouse=True)
@@ -279,7 +279,7 @@ class TestMCPToolExecute:
         """execute 外层异常（如线程创建失败）应返回 is_error=True。"""
         tool = _make_mcp_tool()
 
-        with patch("agentforge.mcp.tool.threading.Thread", side_effect=OSError("无法创建线程")):
+        with patch("hai_agent.mcp.tool.threading.Thread", side_effect=OSError("无法创建线程")):
             result = tool.execute(tool_call_id="call_5", query="test")
 
         assert isinstance(result, ToolResult)

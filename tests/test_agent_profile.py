@@ -1,7 +1,7 @@
 """AgentProfile 单元测试。"""
 
 import pytest
-from agentforge.profiles.profile import AgentProfile
+from hai_agent.profiles.profile import AgentProfile
 
 
 class TestAgentProfile:

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from agentforge import quick_chat, on_event, Agent, EventType
+from hai_agent import quick_chat, on_event, Agent, EventType
 
 
 class TestQuickChat:
@@ -102,7 +102,7 @@ class TestOnEvent:
             pass
 
         # 创建 Agent 并注册
-        with patch("agentforge.Agent._auto_select_provider"):
+        with patch("hai_agent.Agent._auto_select_provider"):
             agent = MagicMock(spec=Agent)
             agent.on = MagicMock()
 
@@ -118,16 +118,16 @@ class TestConvenienceExports:
 
     def test_quick_chat_exported(self):
         """测试 quick_chat 从主模块导出。"""
-        from agentforge import quick_chat as qc
+        from hai_agent import quick_chat as qc
         assert callable(qc)
 
     def test_on_event_exported(self):
         """测试 on_event 从主模块导出。"""
-        from agentforge import on_event as oe
+        from hai_agent import on_event as oe
         assert callable(oe)
 
     def test_all_includes_convenience_functions(self):
         """测试 __all__ 包含便捷函数。"""
-        import agentforge
-        assert "quick_chat" in agentforge.__all__
-        assert "on_event" in agentforge.__all__
+        import hai_agent
+        assert "quick_chat" in hai_agent.__all__
+        assert "on_event" in hai_agent.__all__

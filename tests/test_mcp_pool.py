@@ -3,7 +3,7 @@
 import time
 from unittest.mock import MagicMock, patch
 
-from agentforge.mcp.pool import MCPConnectionPool
+from hai_agent.mcp.pool import MCPConnectionPool
 
 
 class TestMCPConnectionPoolInit:
@@ -121,7 +121,7 @@ class TestMCPConnectionPoolMocked:
         mock_client = MagicMock()
         mock_client.is_connected.return_value = True
 
-        with patch("agentforge.mcp.pool.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.pool.MCPClient", return_value=mock_client):
             mock_future = MagicMock()
             mock_future.result.return_value = None
             with patch("asyncio.run_coroutine_threadsafe", return_value=mock_future):

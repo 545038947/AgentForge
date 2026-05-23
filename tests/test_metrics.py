@@ -3,7 +3,7 @@
 import time
 from unittest.mock import MagicMock
 
-from agentforge.metrics.collector import (
+from hai_agent.metrics.collector import (
     MetricsCollector, ProviderMetrics, ToolMetrics, SessionMetrics,
 )
 

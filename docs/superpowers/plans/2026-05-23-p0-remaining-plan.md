@@ -5,7 +5,7 @@
 **Goal:** 完成剩余 3 项 P0 改进，使框架满足生产环境最低要求
 
 **Architecture:**
-- MCP 测试：为 `agentforge/mcp/` 11 个文件编写单元测试，覆盖类型、配置、客户端、工具包装、管理器
+- MCP 测试：为 `hai_agent/mcp/` 11 个文件编写单元测试，覆盖类型、配置、客户端、工具包装、管理器
 - Mock 降级修复：将所有 Provider 的静默 Mock 响应替换为 `ProviderError` 抛出
 - 裸异常修复：将 79 处 `except Exception` 缩窄为具体异常类型，并为静默吞异常的块添加日志
 
@@ -23,14 +23,14 @@
 | `tests/test_mcp_tool.py` | MCP 工具包装测试 | 创建 |
 | `tests/test_mcp_manager.py` | MCP 管理器测试 | 创建 |
 | `tests/test_mcp_transports.py` | MCP 传输层测试 | 创建 |
-| `agentforge/providers/builtins/openai.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/anthropic.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/deepseek.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/qwen.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/moonshot.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/chinese/deepseek.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/chinese/moonshot.py` | 移除 Mock 响应 | 修改 |
-| `agentforge/providers/builtins/chinese/qwen.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/openai.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/anthropic.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/deepseek.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/qwen.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/moonshot.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/chinese/deepseek.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/chinese/moonshot.py` | 移除 Mock 响应 | 修改 |
+| `hai_agent/providers/builtins/chinese/qwen.py` | 移除 Mock 响应 | 修改 |
 | 27 个源文件 | 缩窄 except Exception | 修改 |
 
 ---
@@ -48,20 +48,20 @@
 
 import pytest
 
-from agentforge.mcp.types import (
+from hai_agent.mcp.types import (
     MCPToolSchema,
     MCPResourceSchema,
     MCPToolResult,
     MCPResourceContent,
 )
-from agentforge.mcp.errors import (
+from hai_agent.mcp.errors import (
     MCPError,
     MCPConnectionError,
     MCPToolCallError,
     MCPResourceError,
     MCPConfigError,
 )
-from agentforge.types.errors import AgentForgeError
+from hai_agent.types.errors import AgentForgeError
 
 
 class TestMCPToolSchema:
@@ -247,8 +247,8 @@ import tempfile
 
 import pytest
 
-from agentforge.mcp.config import MCPConfig, MCPServerConfig
-from agentforge.mcp.errors import MCPConfigError
+from hai_agent.mcp.config import MCPConfig, MCPServerConfig
+from hai_agent.mcp.errors import MCPConfigError
 
 
 class TestMCPServerConfig:
@@ -427,10 +427,10 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.config import MCPServerConfig
-from agentforge.mcp.errors import MCPConnectionError, MCPToolCallError, MCPResourceError
-from agentforge.mcp.types import MCPToolSchema, MCPToolResult, MCPResourceContent
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.config import MCPServerConfig
+from hai_agent.mcp.errors import MCPConnectionError, MCPToolCallError, MCPResourceError
+from hai_agent.mcp.types import MCPToolSchema, MCPToolResult, MCPResourceContent
 
 
 def _make_stdio_config() -> MCPServerConfig:
@@ -685,10 +685,10 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.tool import MCPTool
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.types import MCPToolSchema
-from agentforge.types import ToolResult
+from hai_agent.mcp.tool import MCPTool
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.types import MCPToolSchema
+from hai_agent.types import ToolResult
 
 
 def _make_mcp_tool() -> MCPTool:
@@ -831,12 +831,12 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.manager import MCPManager
-from agentforge.mcp.config import MCPConfig, MCPServerConfig
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.tool import MCPTool
-from agentforge.mcp.types import MCPToolSchema
-from agentforge.mcp.errors import MCPConfigError, MCPConnectionError
+from hai_agent.mcp.manager import MCPManager
+from hai_agent.mcp.config import MCPConfig, MCPServerConfig
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.tool import MCPTool
+from hai_agent.mcp.types import MCPToolSchema
+from hai_agent.mcp.errors import MCPConfigError, MCPConnectionError
 
 
 def _make_config_with_servers(n: int) -> MCPConfig:
@@ -1036,9 +1036,9 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.transports.stdio import StdioTransport
-from agentforge.mcp.transports.http import HTTPTransport
-from agentforge.mcp.errors import MCPConnectionError
+from hai_agent.mcp.transports.stdio import StdioTransport
+from hai_agent.mcp.transports.http import HTTPTransport
+from hai_agent.mcp.errors import MCPConnectionError
 
 
 class TestStdioTransportInit:
@@ -1163,14 +1163,14 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ## Task 7: 修复 Mock 响应静默降级
 
 **Files:**
-- Modify: `agentforge/providers/builtins/openai.py`
-- Modify: `agentforge/providers/builtins/anthropic.py`
-- Modify: `agentforge/providers/builtins/deepseek.py`
-- Modify: `agentforge/providers/builtins/qwen.py`
-- Modify: `agentforge/providers/builtins/moonshot.py`
-- Modify: `agentforge/providers/builtins/chinese/deepseek.py`
-- Modify: `agentforge/providers/builtins/chinese/moonshot.py`
-- Modify: `agentforge/providers/builtins/chinese/qwen.py`
+- Modify: `hai_agent/providers/builtins/openai.py`
+- Modify: `hai_agent/providers/builtins/anthropic.py`
+- Modify: `hai_agent/providers/builtins/deepseek.py`
+- Modify: `hai_agent/providers/builtins/qwen.py`
+- Modify: `hai_agent/providers/builtins/moonshot.py`
+- Modify: `hai_agent/providers/builtins/chinese/deepseek.py`
+- Modify: `hai_agent/providers/builtins/chinese/moonshot.py`
+- Modify: `hai_agent/providers/builtins/chinese/qwen.py`
 
 ### 7.1 修复 Builtins Provider（client is None 时抛异常）
 
@@ -1251,7 +1251,7 @@ Expected: 之前因 Mock 响应通过的测试可能需要更新（改为 expect
 - [ ] **Step 6: 提交**
 
 ```bash
-git add agentforge/providers/builtins/
+git add hai_agent/providers/builtins/
 git commit -m "fix(providers): 移除 Mock 静默降级，未配置时抛出 ProviderError
 
 - OpenAI/Anthropic/DeepSeek/Qwen/Moonshot: client is None 时抛 ProviderError
@@ -1266,12 +1266,12 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ## Task 8: 缩窄裸 except Exception（高优先级块）
 
 **Files:**
-- Modify: `agentforge/agent.py`
-- Modify: `agentforge/core/execution.py`
-- Modify: `agentforge/mcp/tool.py`
-- Modify: `agentforge/mcp/manager.py`
-- Modify: `agentforge/mcp/transports/stdio.py`
-- Modify: `agentforge/mcp/transports/http.py`
+- Modify: `hai_agent/agent.py`
+- Modify: `hai_agent/core/execution.py`
+- Modify: `hai_agent/mcp/tool.py`
+- Modify: `hai_agent/mcp/manager.py`
+- Modify: `hai_agent/mcp/transports/stdio.py`
+- Modify: `hai_agent/mcp/transports/http.py`
 
 此任务只修复**最高风险**的裸 `except Exception` 块（主循环、翻译器模式、静默吞异常）。其余块在 Task 9 中处理。
 
@@ -1397,7 +1397,7 @@ Expected: PASS
 - [ ] **Step 10: 提交**
 
 ```bash
-git add agentforge/agent.py agentforge/core/execution.py agentforge/mcp/
+git add hai_agent/agent.py hai_agent/core/execution.py hai_agent/mcp/
 git commit -m "fix: 缩窄高优先级裸 except Exception 块
 
 - agent.py: 流式调用、atexit、速率限制头解析
@@ -1414,32 +1414,32 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ## Task 9: 缩窄裸 except Exception（中低优先级块）
 
 **Files:**
-- Modify: `agentforge/managers/message.py`
-- Modify: `agentforge/memory/manager.py`
-- Modify: `agentforge/memory/memory_store.py`
-- Modify: `agentforge/memory/extractor.py`
-- Modify: `agentforge/memory/builtins/file_based.py`
-- Modify: `agentforge/tools/executor.py`
-- Modify: `agentforge/tools/toolsets.py`
-- Modify: `agentforge/tools/base.py`
-- Modify: `agentforge/tools/checkpoint.py`
-- Modify: `agentforge/tools/builtins/*.py`
-- Modify: `agentforge/providers/client_factory.py`
-- Modify: `agentforge/providers/custom.py`
-- Modify: `agentforge/providers/registry.py`
-- Modify: `agentforge/providers/profile.py`
-- Modify: `agentforge/providers/transports/chat_completions.py`
-- Modify: `agentforge/providers/transports/anthropic.py`
-- Modify: `agentforge/providers/builtins/*.py`
-- Modify: `agentforge/session/builtins/file_based.py`
-- Modify: `agentforge/events/emitter.py`
-- Modify: `agentforge/hooks/__init__.py`
-- Modify: `agentforge/skills/loader.py`
-- Modify: `agentforge/delegation/manager.py`
-- Modify: `agentforge/core/async_utils.py`
-- Modify: `agentforge/core/stream_accumulator.py`
-- Modify: `agentforge/types/errors.py`
-- Modify: `agentforge/profiles/registry.py`
+- Modify: `hai_agent/managers/message.py`
+- Modify: `hai_agent/memory/manager.py`
+- Modify: `hai_agent/memory/memory_store.py`
+- Modify: `hai_agent/memory/extractor.py`
+- Modify: `hai_agent/memory/builtins/file_based.py`
+- Modify: `hai_agent/tools/executor.py`
+- Modify: `hai_agent/tools/toolsets.py`
+- Modify: `hai_agent/tools/base.py`
+- Modify: `hai_agent/tools/checkpoint.py`
+- Modify: `hai_agent/tools/builtins/*.py`
+- Modify: `hai_agent/providers/client_factory.py`
+- Modify: `hai_agent/providers/custom.py`
+- Modify: `hai_agent/providers/registry.py`
+- Modify: `hai_agent/providers/profile.py`
+- Modify: `hai_agent/providers/transports/chat_completions.py`
+- Modify: `hai_agent/providers/transports/anthropic.py`
+- Modify: `hai_agent/providers/builtins/*.py`
+- Modify: `hai_agent/session/builtins/file_based.py`
+- Modify: `hai_agent/events/emitter.py`
+- Modify: `hai_agent/hooks/__init__.py`
+- Modify: `hai_agent/skills/loader.py`
+- Modify: `hai_agent/delegation/manager.py`
+- Modify: `hai_agent/core/async_utils.py`
+- Modify: `hai_agent/core/stream_accumulator.py`
+- Modify: `hai_agent/types/errors.py`
+- Modify: `hai_agent/profiles/registry.py`
 
 此任务处理剩余约 60 处裸 `except Exception` 块。修改原则：
 
@@ -1462,7 +1462,7 @@ Expected: PASS
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/
+git add hai_agent/
 git commit -m "fix: 缩窄剩余裸 except Exception 块
 
 - I/O 操作: OSError/IOError/PermissionError
@@ -1490,7 +1490,7 @@ Expected: 所有 MCP 测试通过
 
 - [ ] **Step 3: 验证 Mock 降级已修复**
 
-Run: `python -c "from agentforge.providers.builtins.openai import OpenAIProvider; p = OpenAIProvider(model='test'); list(p.stream([]))"`
+Run: `python -c "from hai_agent.providers.builtins.openai import OpenAIProvider; p = OpenAIProvider(model='test'); list(p.stream([]))"`
 Expected: 抛出 ProviderError 而非返回 Mock 响应
 
 - [ ] **Step 4: 最终提交**

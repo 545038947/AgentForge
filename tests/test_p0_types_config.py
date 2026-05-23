@@ -1,7 +1,7 @@
 """P0 阶段单元测试。"""
 
 import pytest
-from agentforge.types import (
+from hai_agent.types import (
     Message,
     TextContent,
     ImageContent,
@@ -13,7 +13,7 @@ from agentforge.types import (
     ToolSpec,
     ToolResult,
 )
-from agentforge.types.errors import (
+from hai_agent.types.errors import (
     AgentForgeError,
     ConfigurationError,
     ProviderError,
@@ -22,7 +22,7 @@ from agentforge.types.errors import (
     ToolExecutionError,
     InterruptException,
 )
-from agentforge.config import Settings, ProviderSettings, SecretManager
+from hai_agent.config import Settings, ProviderSettings, SecretManager
 
 
 class TestMessageTypes:
@@ -200,7 +200,7 @@ class TestErrorTypes:
 
     def test_agent_forge_error(self):
         """测试基础错误。"""
-        from agentforge.types.errors import ErrorReason
+        from hai_agent.types.errors import ErrorReason
         error = AgentForgeError("Something went wrong", details={"key": "value"})
         assert error.message == "Something went wrong"
         assert error.details == {"key": "value"}
@@ -208,7 +208,7 @@ class TestErrorTypes:
 
     def test_classified_error(self):
         """测试结构化错误分类。"""
-        from agentforge.types.errors import ClassifiedError, ErrorReason
+        from hai_agent.types.errors import ClassifiedError, ErrorReason
         classified = ClassifiedError(
             reason=ErrorReason.rate_limit,
             message="Rate limited",

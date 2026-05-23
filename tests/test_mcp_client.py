@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.client import MCPClient
-from agentforge.mcp.config import MCPServerConfig
-from agentforge.mcp.errors import MCPConnectionError, MCPToolCallError, MCPResourceError
-from agentforge.mcp.types import MCPToolSchema, MCPResourceSchema
+from hai_agent.mcp.client import MCPClient
+from hai_agent.mcp.config import MCPServerConfig
+from hai_agent.mcp.errors import MCPConnectionError, MCPToolCallError, MCPResourceError
+from hai_agent.mcp.types import MCPToolSchema, MCPResourceSchema
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ class TestMCPClientConnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         mock_transport.connect.assert_awaited_once()
@@ -121,7 +121,7 @@ class TestMCPClientConnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.HTTPTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.HTTPTransport", return_value=mock_transport):
             await client.connect()
 
         mock_transport.connect.assert_awaited_once()
@@ -147,7 +147,7 @@ class TestMCPClientConnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             # 第二次调用应直接返回，不再次初始化
             await client.connect()
@@ -162,7 +162,7 @@ class TestMCPClientConnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         # 第一次 request 调用应为 initialize
@@ -177,7 +177,7 @@ class TestMCPClientConnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         mock_transport.send_notification.assert_awaited_once_with(
@@ -197,7 +197,7 @@ class TestMCPClientConnect:
             {"resources": []},  # resources/list
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         tools = client.get_tools()
@@ -217,7 +217,7 @@ class TestMCPClientConnect:
             {"resources": [{"uri": "file:///test.txt", "name": "test"}]},
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         resources = client.get_resources()
@@ -237,7 +237,7 @@ class TestMCPClientConnect:
             {"resources": []},  # resources/list
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         assert client.get_tools() == []
@@ -255,7 +255,7 @@ class TestMCPClientConnect:
             MCPConnectionError("no resources"),  # resources/list 失败
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         assert client.get_resources() == []
@@ -281,7 +281,7 @@ class TestMCPClientConnect:
 
         mock_transport.request.side_effect = record_request
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
 
         assert call_order == ["initialize", "tools/list", "resources/list"]
@@ -301,7 +301,7 @@ class TestMCPClientDisconnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             await client.disconnect()
 
@@ -325,7 +325,7 @@ class TestMCPClientDisconnect:
         client = MCPClient(config)
         mock_transport = _make_mock_transport()
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             await client.disconnect()
 
@@ -361,7 +361,7 @@ class TestMCPClientCallTool:
             {"content": [{"type": "text", "text": "结果"}], "isError": False},
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             result = await client.call_tool("my_tool", {"key": "value"})
 
@@ -388,7 +388,7 @@ class TestMCPClientCallTool:
             {"content": "ok"},  # call_tool
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             result = await client.call_tool("my_tool")
 
@@ -409,7 +409,7 @@ class TestMCPClientCallTool:
             MCPConnectionError("连接断开"),  # call_tool 失败
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             with pytest.raises(MCPToolCallError, match="Tool call failed"):
                 await client.call_tool("my_tool")
@@ -443,7 +443,7 @@ class TestMCPClientReadResource:
             {"contents": [{"uri": "file:///test.txt", "text": "文件内容", "mimeType": "text/plain"}]},
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             result = await client.read_resource("file:///test.txt")
 
@@ -469,7 +469,7 @@ class TestMCPClientReadResource:
             MCPConnectionError("连接断开"),  # read_resource 失败
         ]
 
-        with patch("agentforge.mcp.client.StdioTransport", return_value=mock_transport):
+        with patch("hai_agent.mcp.client.StdioTransport", return_value=mock_transport):
             await client.connect()
             with pytest.raises(MCPResourceError, match="Resource read failed"):
                 await client.read_resource("file:///test.txt")

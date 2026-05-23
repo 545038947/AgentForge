@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from agentforge.metrics.prometheus import PrometheusExporter, _PROMETHEUS_AVAILABLE
+from hai_agent.metrics.prometheus import PrometheusExporter, _PROMETHEUS_AVAILABLE
 
 
 class TestPrometheusExporterNoLib:
@@ -64,9 +64,9 @@ class TestPrometheusExporterWithLib:
         }
         exporter.export(snapshot)
         text = exporter.get_metrics_text()
-        assert "agentforge_provider_requests_total" in text
-        assert "agentforge_tool_calls_total" in text
-        assert "agentforge_session_turns_total" in text
+        assert "hai_agent_provider_requests_total" in text
+        assert "hai_agent_tool_calls_total" in text
+        assert "hai_agent_session_turns_total" in text
 
     def test_get_metrics_text_format(self):
         if not _PROMETHEUS_AVAILABLE:

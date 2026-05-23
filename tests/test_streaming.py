@@ -4,9 +4,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from typing import Iterator, List
 
-from agentforge import Agent, StreamDelta, EventType
-from agentforge.types import NormalizedResponse, ToolCall, Usage
-from agentforge.providers.builtins import OpenAIProvider
+from hai_agent import Agent, StreamDelta, EventType
+from hai_agent.types import NormalizedResponse, ToolCall, Usage
+from hai_agent.providers.builtins import OpenAIProvider
 
 
 class TestStreamDelta:
@@ -215,11 +215,11 @@ class TestStreamExports:
 
     def test_stream_delta_exported(self):
         """测试 StreamDelta 从主模块导出。"""
-        from agentforge import StreamDelta as SD
+        from hai_agent import StreamDelta as SD
         delta = SD(content="test")
         assert delta.content == "test"
 
     def test_stream_delta_in_all(self):
         """测试 __all__ 包含 StreamDelta。"""
-        import agentforge
-        assert "StreamDelta" in agentforge.__all__
+        import hai_agent
+        assert "StreamDelta" in hai_agent.__all__

@@ -3,7 +3,7 @@
 ## 同步流式
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 
@@ -23,7 +23,7 @@ for delta in agent.stream_deltas("讲一个故事"):
 
 ```python
 import asyncio
-from agentforge import Agent
+from hai_agent import Agent
 
 async def main():
     agent = Agent(model="gpt-4")

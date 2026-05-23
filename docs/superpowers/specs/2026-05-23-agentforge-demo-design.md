@@ -211,8 +211,8 @@ def search_web(query: str, limit: int = 3) -> str:
 
 使用 Ollama Provider，默认配置：
 ```python
-from agentforge import Agent
-from agentforge.providers import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers import OllamaProvider
 
 provider = OllamaProvider(
     model="llama3.2",  # 或其他本地模型

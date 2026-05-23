@@ -45,8 +45,8 @@ providers:
 ### 3. 使用 Profile
 
 ```python
-from agentforge import Agent
-from agentforge.profiles import ProfileRegistry, ProviderRegistry
+from hai_agent import Agent
+from hai_agent.profiles import ProfileRegistry, ProviderRegistry
 
 # 初始化
 provider_registry = ProviderRegistry()
@@ -108,7 +108,7 @@ performance-analyzer:
 在委托时可以覆盖 Profile 配置：
 
 ```python
-from agentforge.delegation import TaskSpec
+from hai_agent.delegation import TaskSpec
 
 # 通过 TaskSpec 覆盖
 task = TaskSpec(
@@ -239,7 +239,7 @@ Profile 系统触发以下事件：
 监听事件：
 
 ```python
-from agentforge.events import on_event, EventType
+from hai_agent.events import on_event, EventType
 
 @on_event(EventType.PROFILE_LOADED)
 def on_profile_loaded(event):

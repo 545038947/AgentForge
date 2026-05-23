@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentforge.core.model_metadata import (
+from hai_agent.core.model_metadata import (
     ModelCapabilities,
     DefaultModelMetadataProvider,
 )

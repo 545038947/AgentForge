@@ -78,7 +78,7 @@
 
 **职责：** 专家 Agent 的声明式配置，不持有敏感信息。
 
-**文件：** `agentforge/profiles/profile.py`
+**文件：** `hai_agent/profiles/profile.py`
 
 ```python
 @dataclass
@@ -124,7 +124,7 @@ class AgentProfile:
 
 **职责：** Provider 认证信息管理，支持多来源优先级。
 
-**文件：** `agentforge/profiles/provider_registry.py`
+**文件：** `hai_agent/profiles/provider_registry.py`
 
 **认证优先级（从高到低）：**
 1. 运行时覆盖（代码显式传入）
@@ -154,7 +154,7 @@ class ProviderRegistry:
 
 **职责：** Agent Profile 注册表，懒加载 + 缓存 + 热重载。
 
-**文件：** `agentforge/profiles/registry.py`
+**文件：** `hai_agent/profiles/registry.py`
 
 ```python
 class ProfileRegistry:
@@ -177,7 +177,7 @@ class ProfileRegistry:
 
 ### 2.4 扩展 TaskSpec
 
-**文件：** `agentforge/delegation/config.py`
+**文件：** `hai_agent/delegation/config.py`
 
 ```python
 @dataclass
@@ -199,7 +199,7 @@ class TaskSpec:
 
 ### 2.5 扩展 DelegationManager
 
-**文件：** `agentforge/delegation/manager.py`
+**文件：** `hai_agent/delegation/manager.py`
 
 新增方法：
 
@@ -213,7 +213,7 @@ class TaskSpec:
 
 ### 2.6 扩展 EventType
 
-**文件：** `agentforge/events/types.py`
+**文件：** `hai_agent/events/types.py`
 
 ```python
 class EventType(Enum):
@@ -328,8 +328,8 @@ providers:
 ## 六、使用示例
 
 ```python
-from agentforge import Agent
-from agentforge.profiles import ProfileRegistry, ProviderRegistry
+from hai_agent import Agent
+from hai_agent.profiles import ProfileRegistry, ProviderRegistry
 
 # 1. 初始化
 provider_registry = ProviderRegistry()
@@ -368,7 +368,7 @@ profile_registry.reload()
 
 ### Task 1: 创建 AgentProfile 数据类
 
-**文件：** `agentforge/profiles/profile.py`
+**文件：** `hai_agent/profiles/profile.py`
 
 - [ ] **Step 1: 创建 AgentProfile dataclass**
 
@@ -405,7 +405,7 @@ class AgentProfile:
 
 ### Task 2: 创建 ProviderRegistry
 
-**文件：** `agentforge/profiles/provider_registry.py`
+**文件：** `hai_agent/profiles/provider_registry.py`
 
 - [ ] **Step 1: 创建 ProviderCredentials dataclass**
 
@@ -425,7 +425,7 @@ class AgentProfile:
 
 ### Task 3: 创建 ProfileRegistry
 
-**文件：** `agentforge/profiles/registry.py`
+**文件：** `hai_agent/profiles/registry.py`
 
 - [ ] **Step 1: 实现 ProfileRegistry 类框架**
 
@@ -443,7 +443,7 @@ class AgentProfile:
 
 ### Task 4: 扩展 TaskSpec
 
-**文件：** `agentforge/delegation/config.py`
+**文件：** `hai_agent/delegation/config.py`
 
 - [ ] **Step 1: 添加 agent_profile 字段**
 
@@ -457,7 +457,7 @@ class AgentProfile:
 
 ### Task 5: 扩展 DelegationManager
 
-**文件：** `agentforge/delegation/manager.py`
+**文件：** `hai_agent/delegation/manager.py`
 
 - [ ] **Step 1: 添加 profile_registry 和 provider_registry 参数**
 
@@ -475,7 +475,7 @@ class AgentProfile:
 
 ### Task 6: 扩展 EventType
 
-**文件：** `agentforge/events/types.py`
+**文件：** `hai_agent/events/types.py`
 
 - [ ] **Step 1: 添加 PROFILE_LOADED 事件**
 
@@ -487,7 +487,7 @@ class AgentProfile:
 
 ### Task 7: 扩展 Agent 类
 
-**文件：** `agentforge/agent.py`
+**文件：** `hai_agent/agent.py`
 
 - [ ] **Step 1: 添加 profile_registry 和 provider_registry 参数**
 
@@ -499,7 +499,7 @@ class AgentProfile:
 
 ### Task 8: 创建模块导出
 
-**文件：** `agentforge/profiles/__init__.py`
+**文件：** `hai_agent/profiles/__init__.py`
 
 - [ ] **Step 1: 导出 AgentProfile**
 
@@ -513,7 +513,7 @@ class AgentProfile:
 
 ### Task 9: 更新主 __init__.py
 
-**文件：** `agentforge/__init__.py`
+**文件：** `hai_agent/__init__.py`
 
 - [ ] **Step 1: 导出 profiles 模块**
 

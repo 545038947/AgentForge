@@ -5,21 +5,21 @@ import tempfile
 import logging
 from pathlib import Path
 
-from agentforge.providers.builtins import (
+from hai_agent.providers.builtins import (
     OpenAIProvider,
     AnthropicProvider,
     MoonshotProvider,
     QwenProvider,
     DeepSeekProvider,
 )
-from agentforge.tools.builtins import (
+from hai_agent.tools.builtins import (
     DelegateTool,
     ShellTool,
     FileReadTool,
     FileWriteTool,
     WebFetchTool,
 )
-from agentforge.utils import (
+from hai_agent.utils import (
     get_platform,
     is_windows,
     is_linux,
@@ -29,7 +29,7 @@ from agentforge.utils import (
     setup_logging,
     get_logger,
 )
-from agentforge.types import NormalizedResponse
+from hai_agent.types import NormalizedResponse
 
 
 # ── Provider 测试 ──────────────────────────────────────────────
@@ -397,13 +397,13 @@ class TestLogging:
 
     def test_get_logger(self):
         """测试获取日志器。"""
-        logger = get_logger("agentforge.test")
+        logger = get_logger("hai_agent.test")
 
-        assert logger.name == "agentforge.test"
+        assert logger.name == "hai_agent.test"
 
     def test_set_log_level(self):
         """测试设置日志级别。"""
-        from agentforge.utils.logging import set_log_level
+        from hai_agent.utils.logging import set_log_level
 
         set_log_level("DEBUG")
 

@@ -3,7 +3,7 @@
 ## 启用记忆
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 agent.enable_memory_store("./memories")

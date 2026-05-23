@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.errors import MCPConnectionError
-from agentforge.mcp.transports.stdio import StdioTransport
-from agentforge.mcp.transports.http import HTTPTransport
+from hai_agent.mcp.errors import MCPConnectionError
+from hai_agent.mcp.transports.stdio import StdioTransport
+from hai_agent.mcp.transports.http import HTTPTransport
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +172,7 @@ class TestHTTPTransportConnect:
         mock_client = MagicMock()
         mock_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_client):
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_client):
             await transport.connect()
 
         assert transport._client is mock_client
@@ -186,7 +186,7 @@ class TestHTTPTransportConnect:
         mock_client = MagicMock()
         mock_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
             await transport.connect()
 
         # 检查传给 AsyncClient 的 headers 包含 Authorization
@@ -203,7 +203,7 @@ class TestHTTPTransportConnect:
         mock_client = MagicMock()
         mock_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
             await transport.connect()
 
         call_kwargs = mock_cls.call_args[1]
@@ -219,7 +219,7 @@ class TestHTTPTransportConnect:
         mock_client = MagicMock()
         mock_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
             await transport.connect()
 
         call_kwargs = mock_cls.call_args[1]
@@ -236,7 +236,7 @@ class TestHTTPTransportConnect:
         mock_client = MagicMock()
         mock_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
             await transport.connect()
 
         call_kwargs = mock_cls.call_args[1]
@@ -250,7 +250,7 @@ class TestHTTPTransportConnect:
         mock_client = MagicMock()
         mock_client.is_closed = False
 
-        with patch("agentforge.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
+        with patch("hai_agent.mcp.transports.http.httpx.AsyncClient", return_value=mock_client) as mock_cls:
             await transport.connect()
 
         call_kwargs = mock_cls.call_args[1]

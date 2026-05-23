@@ -35,7 +35,7 @@ providers:
 
 ```python
 from pathlib import Path
-from agentforge.providers import load_custom_providers
+from hai_agent.providers import load_custom_providers
 
 # 加载自定义 Provider
 providers = load_custom_providers(Path("custom_providers.yaml"))
@@ -47,7 +47,7 @@ openrouter = providers["openrouter"]
 ### 3. 使用自定义 Provider
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 # 直接使用自定义 Provider
 agent = Agent(provider=openrouter)
@@ -149,7 +149,7 @@ providers:
 除了 YAML 配置，也可以直接在代码中创建：
 
 ```python
-from agentforge.providers import create_custom_provider
+from hai_agent.providers import create_custom_provider
 
 # 创建 OpenAI 兼容的 Provider
 provider = create_custom_provider(
@@ -161,7 +161,7 @@ provider = create_custom_provider(
 )
 
 # 使用
-from agentforge import Agent
+from hai_agent import Agent
 agent = Agent(provider=provider)
 ```
 
@@ -184,8 +184,8 @@ providers:
 
 ```python
 from pathlib import Path
-from agentforge import Agent
-from agentforge.providers import load_custom_providers
+from hai_agent import Agent
+from hai_agent.providers import load_custom_providers
 
 # 加载自定义 Provider
 custom_providers = load_custom_providers(Path("custom_providers.yaml"))
@@ -206,7 +206,7 @@ print(response.content)
 自定义 Provider 会自动注册 Profile：
 
 ```python
-from agentforge.providers import load_custom_providers, get_profile
+from hai_agent.providers import load_custom_providers, get_profile
 
 # 加载自定义 Provider
 load_custom_providers(Path("custom_providers.yaml"))

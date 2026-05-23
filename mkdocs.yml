@@ -1,8 +1,8 @@
-site_name: AgentForge
+site_name: HAI-Agent
 site_description: 可复用的 Agent 框架库，支持中国大模型
-site_author: AgentForge Team
-repo_url: https://github.com/agentforge/agentforge
-repo_name: agentforge/agentforge
+site_author: HAI-Agent Team
+repo_url: https://github.com/545038947/AgentForge
+repo_name: 545038947/AgentForge
 
 theme:
   name: material

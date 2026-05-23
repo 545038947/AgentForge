@@ -7,12 +7,12 @@ import weakref
 
 import pytest
 
-from agentforge.utils.logging import (
+from hai_agent.utils.logging import (
     SensitiveDataFilter,
     JsonFormatter,
     setup_secure_logging,
 )
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent.providers.builtins.ollama import OllamaProvider
 
 
 class TestSensitiveDataFilter:
@@ -211,7 +211,7 @@ class TestResourceCleanup:
     def test_atexit_hook_registered(self):
         """测试 atexit 钩子被注册。"""
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
-        from agentforge import Agent
+        from hai_agent import Agent
 
         agent = Agent(provider=provider, register_atexit=True)
         assert agent._atexit_registered is True
@@ -219,7 +219,7 @@ class TestResourceCleanup:
     def test_atexit_disabled(self):
         """测试禁用 atexit 钩子。"""
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
-        from agentforge import Agent
+        from hai_agent import Agent
 
         agent = Agent(provider=provider, register_atexit=False)
         assert agent._atexit_registered is False
@@ -227,7 +227,7 @@ class TestResourceCleanup:
     def test_shutdown_idempotent(self):
         """测试 shutdown 可以安全地多次调用。"""
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
-        from agentforge import Agent
+        from hai_agent import Agent
 
         agent = Agent(provider=provider, register_atexit=False)
         agent.shutdown()
@@ -236,7 +236,7 @@ class TestResourceCleanup:
     def test_context_manager_cleanup(self):
         """测试上下文管理器正确清理。"""
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
-        from agentforge import Agent
+        from hai_agent import Agent
 
         with Agent(provider=provider, register_atexit=False) as agent:
             assert agent is not None

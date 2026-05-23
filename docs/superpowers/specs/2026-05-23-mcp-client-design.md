@@ -371,8 +371,8 @@ servers:
 ### 使用方式
 
 ```python
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 
 # 创建 Agent
 provider = OllamaProvider(model="gpt-4")
@@ -423,7 +423,7 @@ class Agent:
 ## 文件结构
 
 ```
-agentforge/
+hai_agent/
 ├── mcp/
 │   ├── __init__.py          # MCP 模块入口
 │   ├── client.py            # MCPClient

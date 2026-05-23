@@ -3,7 +3,7 @@
 import os
 import pytest
 from pathlib import Path
-from agentforge.profiles.provider_registry import (
+from hai_agent.profiles.provider_registry import (
     ProviderCredentials,
     ProviderRegistry,
 )

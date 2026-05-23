@@ -1,9 +1,9 @@
 """Profile 委托集成测试。"""
 
 import pytest
-from agentforge.delegation import DelegationManager, DelegationConfig
-from agentforge.delegation.config import TaskSpec
-from agentforge.profiles import AgentProfile, ProfileRegistry, ProviderRegistry
+from hai_agent.delegation import DelegationManager, DelegationConfig
+from hai_agent.delegation.config import TaskSpec
+from hai_agent.profiles import AgentProfile, ProfileRegistry, ProviderRegistry
 
 
 class TestProfileDelegation:
@@ -13,7 +13,7 @@ class TestProfileDelegation:
         """测试 Profile 解析。"""
         provider_registry = ProviderRegistry()
         # 注册凭证使 Provider 可用
-        from agentforge.profiles.provider_registry import ProviderCredentials
+        from hai_agent.profiles.provider_registry import ProviderCredentials
         provider_registry.register("openai", ProviderCredentials(
             provider="openai",
             api_key="test-key",
@@ -90,7 +90,7 @@ class TestProfileDelegation:
         """测试使用 Profile 解析子 Agent 配置。"""
         provider_registry = ProviderRegistry()
         # 注册凭证使 Provider 可用
-        from agentforge.profiles.provider_registry import ProviderCredentials
+        from hai_agent.profiles.provider_registry import ProviderCredentials
         provider_registry.register("anthropic", ProviderCredentials(
             provider="anthropic",
             api_key="test-key",
@@ -144,7 +144,7 @@ class TestProfileDelegation:
         """测试 TaskSpec 覆盖 Profile 配置。"""
         provider_registry = ProviderRegistry()
         # 注册凭证使 provider 可用
-        from agentforge.profiles.provider_registry import ProviderCredentials
+        from hai_agent.profiles.provider_registry import ProviderCredentials
         provider_registry.register("anthropic", ProviderCredentials(
             provider="anthropic",
             api_key="test-key",

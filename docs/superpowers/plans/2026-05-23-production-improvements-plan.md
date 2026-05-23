@@ -17,8 +17,8 @@
 
 | 文件 | 职责 | 操作 |
 |------|------|------|
-| `agentforge/utils/logging.py` | 日志配置、敏感信息过滤 | 修改 |
-| `agentforge/agent.py` | Agent 类，添加 atexit 钩子 | 修改 |
+| `hai_agent/utils/logging.py` | 日志配置、敏感信息过滤 | 修改 |
+| `hai_agent/agent.py` | Agent 类，添加 atexit 钩子 | 修改 |
 | `tests/test_production.py` | 生产环境相关测试 | 创建 |
 | `tests/test_concurrent.py` | 并发场景测试 | 创建 |
 
@@ -27,7 +27,7 @@
 ## Task 1: 日志敏感信息过滤
 
 **Files:**
-- Modify: `agentforge/utils/logging.py`
+- Modify: `hai_agent/utils/logging.py`
 - Test: `tests/test_production.py`
 
 ### 1.1 编写敏感信息过滤测试
@@ -40,7 +40,7 @@
 
 import logging
 import pytest
-from agentforge.utils.logging import (
+from hai_agent.utils.logging import (
     SensitiveDataFilter,
     setup_logging,
     get_logger,
@@ -125,7 +125,7 @@ Expected: FAIL (SensitiveDataFilter not defined)
 - [ ] **Step 3: 在 logging.py 中添加 SensitiveDataFilter**
 
 ```python
-# agentforge/utils/logging.py (在文件末尾添加)
+# hai_agent/utils/logging.py (在文件末尾添加)
 
 import re
 from typing import List, Pattern
@@ -257,7 +257,7 @@ Expected: PASS
 - [ ] **Step 5: 提交更改**
 
 ```bash
-git add agentforge/utils/logging.py tests/test_production.py
+git add hai_agent/utils/logging.py tests/test_production.py
 git commit -m "feat(logging): 添加敏感信息过滤和结构化日志支持
 
 - 添加 SensitiveDataFilter 自动脱敏 API Key、Token、密码
@@ -273,7 +273,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ## Task 2: atexit 钩子确保资源清理
 
 **Files:**
-- Modify: `agentforge/agent.py`
+- Modify: `hai_agent/agent.py`
 - Test: `tests/test_production.py`
 
 ### 2.1 编写 atexit 钩子测试
@@ -292,8 +292,8 @@ class TestResourceCleanup:
 
     def test_atexit_hook_registered(self):
         """测试 atexit 钩子被注册。"""
-        from agentforge.providers.builtins.ollama import OllamaProvider
-        from agentforge import Agent
+        from hai_agent.providers.builtins.ollama import OllamaProvider
+        from hai_agent import Agent
 
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
         agent = Agent(provider=provider, register_atexit=True)
@@ -305,8 +305,8 @@ class TestResourceCleanup:
     def test_shutdown_called_on_exit(self):
         """测试退出时 shutdown 被调用。"""
         from unittest.mock import MagicMock, patch
-        from agentforge import Agent
-        from agentforge.providers.builtins.ollama import OllamaProvider
+        from hai_agent import Agent
+        from hai_agent.providers.builtins.ollama import OllamaProvider
 
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
         agent = Agent(provider=provider, register_atexit=True)
@@ -329,8 +329,8 @@ class TestResourceCleanup:
 
     def test_context_manager_cleanup(self):
         """测试上下文管理器正确清理。"""
-        from agentforge import Agent
-        from agentforge.providers.builtins.ollama import OllamaProvider
+        from hai_agent import Agent
+        from hai_agent.providers.builtins.ollama import OllamaProvider
 
         provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
 
@@ -351,10 +351,10 @@ Expected: FAIL (register_atexit 参数不存在)
 
 - [ ] **Step 3: 在 Agent.__init__ 中添加 atexit 支持**
 
-找到 `agentforge/agent.py` 的 `__init__` 方法，添加参数和注册逻辑：
+找到 `hai_agent/agent.py` 的 `__init__` 方法，添加参数和注册逻辑：
 
 ```python
-# agentforge/agent.py
+# hai_agent/agent.py
 
 # 在文件顶部导入区域添加
 import atexit
@@ -423,7 +423,7 @@ Expected: PASS
 - [ ] **Step 5: 提交更改**
 
 ```bash
-git add agentforge/agent.py tests/test_production.py
+git add hai_agent/agent.py tests/test_production.py
 git commit -m "feat(agent): 添加 atexit 钩子确保资源清理
 
 - Agent 初始化时可选择注册 atexit 钩子
@@ -451,8 +451,8 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 import asyncio
 import pytest
 from unittest.mock import MagicMock, patch
-from agentforge import Agent
-from agentforge.types import Message, NormalizedResponse
+from hai_agent import Agent
+from hai_agent.types import Message, NormalizedResponse
 
 
 class TestConcurrentSessions:
@@ -537,8 +537,8 @@ class TestThreadSafety:
     def test_message_manager_thread_safety(self):
         """测试 MessageManager 线程安全。"""
         import threading
-        from agentforge.managers.message import MessageManager
-        from agentforge.config.settings import Settings
+        from hai_agent.managers.message import MessageManager
+        from hai_agent.config.settings import Settings
 
         manager = MessageManager(Settings())
         errors = []
@@ -590,7 +590,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ## Task 4: 结构化日志配置接口
 
 **Files:**
-- Modify: `agentforge/utils/logging.py`
+- Modify: `hai_agent/utils/logging.py`
 - Test: `tests/test_production.py`
 
 ### 4.1 添加结构化日志测试
@@ -609,7 +609,7 @@ class TestStructuredLogging:
 
     def test_json_format(self):
         """测试 JSON 格式日志。"""
-        from agentforge.utils.logging import JsonFormatter
+        from hai_agent.utils.logging import JsonFormatter
 
         # 创建带 JSON 格式器的处理器
         stream = io.StringIO()
@@ -635,7 +635,7 @@ class TestStructuredLogging:
 
     def test_json_format_with_exception(self):
         """测试 JSON 格式包含异常信息。"""
-        from agentforge.utils.logging import JsonFormatter
+        from hai_agent.utils.logging import JsonFormatter
 
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
@@ -677,16 +677,16 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ## Task 5: 更新公共 API 导出
 
 **Files:**
-- Modify: `agentforge/__init__.py`
+- Modify: `hai_agent/__init__.py`
 
 ### 5.1 导出新的日志函数
 
 - [ ] **Step 1: 更新 __init__.py 导出**
 
 ```python
-# agentforge/__init__.py (在适当位置添加)
+# hai_agent/__init__.py (在适当位置添加)
 
-from agentforge.utils.logging import (
+from hai_agent.utils.logging import (
     setup_logging,
     setup_secure_logging,
     get_logger,
@@ -707,13 +707,13 @@ __all__ = [
 
 - [ ] **Step 2: 验证导入**
 
-Run: `python -c "from agentforge import setup_secure_logging, SensitiveDataFilter, JsonFormatter; print('OK')"`
+Run: `python -c "from hai_agent import setup_secure_logging, SensitiveDataFilter, JsonFormatter; print('OK')"`
 Expected: OK
 
 - [ ] **Step 3: 提交更改**
 
 ```bash
-git add agentforge/__init__.py
+git add hai_agent/__init__.py
 git commit -m "feat: 导出日志相关公共 API
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"

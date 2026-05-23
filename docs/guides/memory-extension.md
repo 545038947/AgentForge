@@ -44,7 +44,7 @@
 ### 继承 MemoryStoreBase
 
 ```python
-from agentforge.memory import MemoryStoreBase
+from hai_agent.memory import MemoryStoreBase
 
 class MyMemoryStore(MemoryStoreBase):
     """自定义记忆存储。"""
@@ -110,7 +110,7 @@ class MyMemoryStore(MemoryStoreBase):
 ### 使用自定义存储
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 # 创建自定义存储
 my_store = MyMemoryStore("/custom/path")
@@ -133,7 +133,7 @@ agent.sync()
 
 ```python
 from pathlib import Path
-from agentforge.memory import MemoryStore, MemoryStoreBase
+from hai_agent.memory import MemoryStore, MemoryStoreBase
 
 class MultiUserMemoryStore(MemoryStore):
     """多用户记忆存储。
@@ -162,8 +162,8 @@ class MultiUserMemoryStore(MemoryStore):
 ### 在 Web 应用中使用
 
 ```python
-from agentforge import Agent
-from agentforge.memory import MemoryManager
+from hai_agent import Agent
+from hai_agent.memory import MemoryManager
 
 def get_agent_for_user(user_id: str) -> Agent:
     """获取用户专属的 Agent 实例。"""
@@ -198,7 +198,7 @@ async def chat(user_id: str, message: str):
 ### 使用 Chroma 实现
 
 ```python
-from agentforge.memory import MemoryProvider, MemoryMetadata
+from hai_agent.memory import MemoryProvider, MemoryMetadata
 from typing import Any, Dict, List, Optional
 import chromadb
 
@@ -271,7 +271,7 @@ class VectorMemoryProvider(MemoryProvider):
 ### 使用向量存储
 
 ```python
-from agentforge import Agent, MemoryManager
+from hai_agent import Agent, MemoryManager
 from myapp.memory import VectorMemoryProvider
 
 # 创建向量存储
@@ -299,7 +299,7 @@ results = vector_memory.search("用户的称呼")
 ### 使用内置规则提取器
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4")
 agent.enable_memory_store("./memories")
@@ -320,8 +320,8 @@ print(store.memory_entries)
 ### 使用 LLM 辅助提取
 
 ```python
-from agentforge import Agent
-from agentforge.providers import OpenAIProvider
+from hai_agent import Agent
+from hai_agent.providers import OpenAIProvider
 
 # 创建 Provider
 provider = OpenAIProvider(model="gpt-4")
@@ -343,7 +343,7 @@ agent.sync()
 ### 自定义提取器
 
 ```python
-from agentforge.memory import MemoryExtractor, ExtractedMemory, MemoryType
+from hai_agent.memory import MemoryExtractor, ExtractedMemory, MemoryType
 
 class MyExtractor(MemoryExtractor):
     """自定义记忆提取器。"""
@@ -378,7 +378,7 @@ agent._memory_manager.enable_auto_extraction(extractor=MyExtractor())
 ### 使用元数据
 
 ```python
-from agentforge.memory import MemoryMetadata, MemorySource, MemoryType
+from hai_agent.memory import MemoryMetadata, MemorySource, MemoryType
 
 # 创建用户事实记忆
 metadata = MemoryMetadata.user_fact(
@@ -411,7 +411,7 @@ if metadata.is_expired():
 ### 实现时间衰减
 
 ```python
-from agentforge.memory import MemoryMetadata
+from hai_agent.memory import MemoryMetadata
 from datetime import datetime, timedelta
 
 # 创建记忆（10小时前）
@@ -472,8 +472,8 @@ def cleanup_memories(store: MemoryStoreBase, threshold: float = 0.2):
 ### 4. 多层记忆协同
 
 ```python
-from agentforge import Agent, MemoryManager
-from agentforge.memory import InMemoryProvider
+from hai_agent import Agent, MemoryManager
+from hai_agent.memory import InMemoryProvider
 
 # Session 层：临时会话数据
 session = InMemoryProvider()

@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from agentforge.session import (
+from hai_agent.session import (
     SessionProvider,
     SessionInfo,
     MessageRecord,

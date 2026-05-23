@@ -5,8 +5,8 @@ import tempfile
 
 import pytest
 
-from agentforge.mcp.config import MCPConfig, MCPServerConfig
-from agentforge.mcp.errors import MCPConfigError
+from hai_agent.mcp.config import MCPConfig, MCPServerConfig
+from hai_agent.mcp.errors import MCPConfigError
 
 
 class TestMCPServerConfigFromDict:

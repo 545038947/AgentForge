@@ -18,8 +18,8 @@ if sys.platform == "win32":
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from agentforge.delegation import DelegationManager, DelegationStrategy
-from agentforge.delegation.config import TaskSpec, DelegationConfig
+from hai_agent.delegation import DelegationManager, DelegationStrategy
+from hai_agent.delegation.config import TaskSpec, DelegationConfig
 from demo.utils import setup_demo, print_section, create_agent
 from demo.config import get_config
 

@@ -4,8 +4,8 @@ import pytest
 import threading
 import time
 
-from agentforge.interrupt import InterruptToken, InterruptHandler
-from agentforge.events import EventType, Event, EventEmitter, EventDispatcher
+from hai_agent.interrupt import InterruptToken, InterruptHandler
+from hai_agent.events import EventType, Event, EventEmitter, EventDispatcher
 
 
 class TestInterruptToken:

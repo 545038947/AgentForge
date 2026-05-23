@@ -21,8 +21,8 @@ if sys.platform == "win32":
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agentforge import Agent
-from agentforge.providers.builtins.ollama import OllamaProvider
+from hai_agent import Agent
+from hai_agent.providers.builtins.ollama import OllamaProvider
 from demo.config import get_config, reload_config, DemoConfig
 from demo.tools import get_all_demo_tools
 

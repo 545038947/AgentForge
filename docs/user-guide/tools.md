@@ -5,7 +5,7 @@
 ### 函数式工具
 
 ```python
-from agentforge import tool
+from hai_agent import tool
 
 @tool
 def search(query: str) -> str:
@@ -23,7 +23,7 @@ def search(query: str) -> str:
 ### 类式工具
 
 ```python
-from agentforge import FunctionTool
+from hai_agent import FunctionTool
 
 class Calculator(FunctionTool):
     name = "calculator"
@@ -36,7 +36,7 @@ class Calculator(FunctionTool):
 ## 使用工具
 
 ```python
-from agentforge import Agent
+from hai_agent import Agent
 
 agent = Agent(model="gpt-4", tools=[search, Calculator()])
 response = agent.run("搜索 Python 教程")
@@ -45,7 +45,7 @@ response = agent.run("搜索 Python 教程")
 ## 工具护栏
 
 ```python
-from agentforge.tools import ToolCallGuardrailController
+from hai_agent.tools import ToolCallGuardrailController
 
 guardrail = ToolCallGuardrailController(
     allowed_tools=["search", "read"],

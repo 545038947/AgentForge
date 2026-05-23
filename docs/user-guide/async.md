@@ -4,7 +4,7 @@
 
 ```python
 import asyncio
-from agentforge import Agent
+from hai_agent import Agent
 
 async def main():
     agent = Agent(model="gpt-4")

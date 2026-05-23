@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from agentforge.tools.checkpoint import (
+from hai_agent.tools.checkpoint import (
     CheckpointManager,
     DEFAULT_EXCLUDES,
     _validate_commit_hash,

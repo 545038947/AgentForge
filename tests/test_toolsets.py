@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agentforge.tools.toolsets import (
+from hai_agent.tools.toolsets import (
     ToolsetDefinition,
     ToolsetRegistry,
     register_toolset,

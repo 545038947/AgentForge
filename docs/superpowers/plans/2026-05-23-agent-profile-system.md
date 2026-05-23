@@ -13,23 +13,23 @@
 ## 文件结构
 
 ```
-agentforge/profiles/
+hai_agent/profiles/
 ├── __init__.py              # 模块导出
 ├── profile.py               # AgentProfile 数据类
 ├── provider_registry.py     # Provider 认证注册表
 └── registry.py              # Profile 注册表（懒加载+缓存）
 
-agentforge/delegation/
+hai_agent/delegation/
 ├── config.py                # 修改：扩展 TaskSpec
 └── manager.py               # 修改：集成 Profile 解析
 
-agentforge/events/
+hai_agent/events/
 └── types.py                 # 修改：新增 Profile 相关事件
 
-agentforge/
+hai_agent/
 └── agent.py                 # 修改：支持 profile_registry 参数
 
-agentforge/
+hai_agent/
 └── __init__.py              # 修改：导出 profiles 模块
 
 tests/
@@ -43,15 +43,15 @@ tests/
 ## Task 1: 创建 AgentProfile 数据类
 
 **Files:**
-- Create: `agentforge/profiles/__init__.py` (空文件占位)
-- Create: `agentforge/profiles/profile.py`
+- Create: `hai_agent/profiles/__init__.py` (空文件占位)
+- Create: `hai_agent/profiles/profile.py`
 - Create: `tests/test_agent_profile.py`
 
 - [ ] **Step 1: 创建 profiles 目录和 __init__.py**
 
 ```bash
-mkdir -p agentforge/profiles
-touch agentforge/profiles/__init__.py
+mkdir -p hai_agent/profiles
+touch hai_agent/profiles/__init__.py
 ```
 
 - [ ] **Step 2: 编写 AgentProfile 测试**
@@ -62,7 +62,7 @@ touch agentforge/profiles/__init__.py
 """AgentProfile 单元测试。"""
 
 import pytest
-from agentforge.profiles.profile import AgentProfile
+from hai_agent.profiles.profile import AgentProfile
 
 
 class TestAgentProfile:
@@ -163,7 +163,7 @@ Expected: FAIL with "ModuleNotFoundError: No module named 'agentforge.profiles'"
 
 - [ ] **Step 4: 实现 AgentProfile 数据类**
 
-创建 `agentforge/profiles/profile.py`:
+创建 `hai_agent/profiles/profile.py`:
 
 ```python
 """Agent Profile 数据类。
@@ -178,8 +178,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
-    from agentforge.profiles.registry import ProfileRegistry
-    from agentforge.profiles.provider_registry import ProviderRegistry
+    from hai_agent.profiles.registry import ProfileRegistry
+    from hai_agent.profiles.provider_registry import ProviderRegistry
 
 
 @dataclass
@@ -417,7 +417,7 @@ Expected: PASS
 - [ ] **Step 6: 提交**
 
 ```bash
-git add agentforge/profiles/__init__.py agentforge/profiles/profile.py tests/test_agent_profile.py
+git add hai_agent/profiles/__init__.py hai_agent/profiles/profile.py tests/test_agent_profile.py
 git commit -m "feat(profiles): 添加 AgentProfile 数据类
 
 - 支持声明式配置专家 Agent
@@ -430,7 +430,7 @@ git commit -m "feat(profiles): 添加 AgentProfile 数据类
 ## Task 2: 创建 ProviderRegistry
 
 **Files:**
-- Create: `agentforge/profiles/provider_registry.py`
+- Create: `hai_agent/profiles/provider_registry.py`
 - Create: `tests/test_provider_registry.py`
 
 - [ ] **Step 1: 编写 ProviderCredentials 和 ProviderRegistry 测试**
@@ -443,7 +443,7 @@ git commit -m "feat(profiles): 添加 AgentProfile 数据类
 import os
 import pytest
 from pathlib import Path
-from agentforge.profiles.provider_registry import (
+from hai_agent.profiles.provider_registry import (
     ProviderCredentials,
     ProviderRegistry,
 )
@@ -543,7 +543,7 @@ Expected: FAIL with "ModuleNotFoundError"
 
 - [ ] **Step 3: 实现 ProviderRegistry**
 
-创建 `agentforge/profiles/provider_registry.py`:
+创建 `hai_agent/profiles/provider_registry.py`:
 
 ```python
 """Provider 认证注册表。
@@ -776,7 +776,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add agentforge/profiles/provider_registry.py tests/test_provider_registry.py
+git add hai_agent/profiles/provider_registry.py tests/test_provider_registry.py
 git commit -m "feat(profiles): 添加 ProviderRegistry 认证管理
 
 - 支持多来源优先级（运行时 > 配置 > 环境变量）
@@ -789,7 +789,7 @@ git commit -m "feat(profiles): 添加 ProviderRegistry 认证管理
 ## Task 3: 创建 ProfileRegistry
 
 **Files:**
-- Create: `agentforge/profiles/registry.py`
+- Create: `hai_agent/profiles/registry.py`
 - Create: `tests/test_profile_registry.py`
 
 - [ ] **Step 1: 编写 ProfileRegistry 测试**
@@ -801,9 +801,9 @@ git commit -m "feat(profiles): 添加 ProviderRegistry 认证管理
 
 import pytest
 from pathlib import Path
-from agentforge.profiles.profile import AgentProfile
-from agentforge.profiles.registry import ProfileRegistry
-from agentforge.profiles.provider_registry import ProviderRegistry
+from hai_agent.profiles.profile import AgentProfile
+from hai_agent.profiles.registry import ProfileRegistry
+from hai_agent.profiles.provider_registry import ProviderRegistry
 
 
 class TestProfileRegistry:
@@ -901,7 +901,7 @@ Expected: FAIL with "ModuleNotFoundError"
 
 - [ ] **Step 3: 实现 ProfileRegistry**
 
-创建 `agentforge/profiles/registry.py`:
+创建 `hai_agent/profiles/registry.py`:
 
 ```python
 """Profile 注册表。
@@ -917,10 +917,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import yaml
 
-from agentforge.profiles.profile import AgentProfile
+from hai_agent.profiles.profile import AgentProfile
 
 if TYPE_CHECKING:
-    from agentforge.profiles.provider_registry import ProviderRegistry
+    from hai_agent.profiles.provider_registry import ProviderRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -1096,7 +1096,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add agentforge/profiles/registry.py tests/test_profile_registry.py
+git add hai_agent/profiles/registry.py tests/test_profile_registry.py
 git commit -m "feat(profiles): 添加 ProfileRegistry 注册表
 
 - 支持懒加载和缓存
@@ -1110,7 +1110,7 @@ git commit -m "feat(profiles): 添加 ProfileRegistry 注册表
 ## Task 4: 扩展 TaskSpec
 
 **Files:**
-- Modify: `agentforge/delegation/config.py`
+- Modify: `hai_agent/delegation/config.py`
 - Modify: `tests/test_p5_delegation.py`
 
 - [ ] **Step 1: 编写 TaskSpec 扩展测试**
@@ -1170,7 +1170,7 @@ Expected: FAIL with "TypeError: __init__() got an unexpected keyword argument 'a
 
 - [ ] **Step 3: 扩展 TaskSpec 数据类**
 
-修改 `agentforge/delegation/config.py` 中的 TaskSpec：
+修改 `hai_agent/delegation/config.py` 中的 TaskSpec：
 
 ```python
 @dataclass
@@ -1234,7 +1234,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add agentforge/delegation/config.py tests/test_p5_delegation.py
+git add hai_agent/delegation/config.py tests/test_p5_delegation.py
 git commit -m "feat(delegation): 扩展 TaskSpec 支持 Profile
 
 - 添加 agent_profile 字段
@@ -1246,11 +1246,11 @@ git commit -m "feat(delegation): 扩展 TaskSpec 支持 Profile
 ## Task 5: 扩展 EventType
 
 **Files:**
-- Modify: `agentforge/events/types.py`
+- Modify: `hai_agent/events/types.py`
 
 - [ ] **Step 1: 添加 Profile 相关事件类型**
 
-修改 `agentforge/events/types.py`，在 EventType 枚举中添加：
+修改 `hai_agent/events/types.py`，在 EventType 枚举中添加：
 
 ```python
     # 记忆系统
@@ -1268,7 +1268,7 @@ git commit -m "feat(delegation): 扩展 TaskSpec 支持 Profile
 - [ ] **Step 2: 提交**
 
 ```bash
-git add agentforge/events/types.py
+git add hai_agent/events/types.py
 git commit -m "feat(events): 添加 Profile 相关事件类型"
 ```
 
@@ -1277,11 +1277,11 @@ git commit -m "feat(events): 添加 Profile 相关事件类型"
 ## Task 6: 更新 profiles 模块导出
 
 **Files:**
-- Modify: `agentforge/profiles/__init__.py`
+- Modify: `hai_agent/profiles/__init__.py`
 
 - [ ] **Step 1: 更新 __init__.py 导出**
 
-修改 `agentforge/profiles/__init__.py`：
+修改 `hai_agent/profiles/__init__.py`：
 
 ```python
 """Profile 系统模块。
@@ -1289,12 +1289,12 @@ git commit -m "feat(events): 添加 Profile 相关事件类型"
 提供专家 Agent 的声明式配置管理。
 """
 
-from agentforge.profiles.profile import AgentProfile
-from agentforge.profiles.provider_registry import (
+from hai_agent.profiles.profile import AgentProfile
+from hai_agent.profiles.provider_registry import (
     ProviderCredentials,
     ProviderRegistry,
 )
-from agentforge.profiles.registry import ProfileRegistry
+from hai_agent.profiles.registry import ProfileRegistry
 
 __all__ = [
     "AgentProfile",
@@ -1307,7 +1307,7 @@ __all__ = [
 - [ ] **Step 2: 提交**
 
 ```bash
-git add agentforge/profiles/__init__.py
+git add hai_agent/profiles/__init__.py
 git commit -m "feat(profiles): 导出模块公共 API"
 ```
 
@@ -1316,7 +1316,7 @@ git commit -m "feat(profiles): 导出模块公共 API"
 ## Task 7: 扩展 DelegationManager
 
 **Files:**
-- Modify: `agentforge/delegation/manager.py`
+- Modify: `hai_agent/delegation/manager.py`
 - Create: `tests/test_profile_delegation.py`
 
 - [ ] **Step 1: 编写 DelegationManager Profile 集成测试**
@@ -1327,9 +1327,9 @@ git commit -m "feat(profiles): 导出模块公共 API"
 """Profile 委托集成测试。"""
 
 import pytest
-from agentforge.delegation import DelegationManager, DelegationConfig
-from agentforge.delegation.config import TaskSpec
-from agentforge.profiles import AgentProfile, ProfileRegistry, ProviderRegistry
+from hai_agent.delegation import DelegationManager, DelegationConfig
+from hai_agent.delegation.config import TaskSpec
+from hai_agent.profiles import AgentProfile, ProfileRegistry, ProviderRegistry
 
 
 class TestProfileDelegation:
@@ -1432,7 +1432,7 @@ Expected: FAIL with "TypeError: __init__() got an unexpected keyword argument"
 
 - [ ] **Step 3: 扩展 DelegationManager 构造函数**
 
-在 `agentforge/delegation/manager.py` 的 `DelegationManager.__init__` 中添加参数：
+在 `hai_agent/delegation/manager.py` 的 `DelegationManager.__init__` 中添加参数：
 
 找到 `__init__` 方法（约第 61 行），添加新参数：
 
@@ -1473,10 +1473,10 @@ Expected: FAIL with "TypeError: __init__() got an unexpected keyword argument"
 
 ```python
 if TYPE_CHECKING:
-    from agentforge.agent import Agent
-    from agentforge.config import Settings
-    from agentforge.providers import Provider
-    from agentforge.profiles import ProfileRegistry, ProviderRegistry  # 新增
+    from hai_agent.agent import Agent
+    from hai_agent.config import Settings
+    from hai_agent.providers import Provider
+    from hai_agent.profiles import ProfileRegistry, ProviderRegistry  # 新增
 ```
 
 - [ ] **Step 4: 实现 _resolve_profile 方法**
@@ -1621,20 +1621,20 @@ if TYPE_CHECKING:
 在文件顶部添加必要的导入：
 
 ```python
-from agentforge.delegation.config import DelegationConfig, IsolationConfig, TaskSpec
-from agentforge.delegation.result import (
+from hai_agent.delegation.config import DelegationConfig, IsolationConfig, TaskSpec
+from hai_agent.delegation.result import (
     DelegationResult,
     DelegationStatus,
     DelegationStrategy,
     ExitReason,
     TaskResult,
 )
-from agentforge.events import EventType
-from agentforge.interrupt import InterruptToken
-from agentforge.types import NormalizedResponse
+from hai_agent.events import EventType
+from hai_agent.interrupt import InterruptToken
+from hai_agent.types import NormalizedResponse
 
 # 新增
-from agentforge.profiles.profile import AgentProfile
+from hai_agent.profiles.profile import AgentProfile
 ```
 
 - [ ] **Step 7: 运行测试确认通过**
@@ -1645,7 +1645,7 @@ Expected: PASS
 - [ ] **Step 8: 提交**
 
 ```bash
-git add agentforge/delegation/manager.py tests/test_profile_delegation.py
+git add hai_agent/delegation/manager.py tests/test_profile_delegation.py
 git commit -m "feat(delegation): 集成 Profile 解析到 DelegationManager
 
 - 添加 profile_registry 和 provider_registry 参数
@@ -1659,7 +1659,7 @@ git commit -m "feat(delegation): 集成 Profile 解析到 DelegationManager
 ## Task 8: 扩展 Agent 类
 
 **Files:**
-- Modify: `agentforge/agent.py`
+- Modify: `hai_agent/agent.py`
 
 - [ ] **Step 1: 添加 profile_registry 和 provider_registry 参数**
 
@@ -1726,10 +1726,10 @@ git commit -m "feat(delegation): 集成 Profile 解析到 DelegationManager
 
 ```python
 if TYPE_CHECKING:
-    from agentforge.providers import Provider
-    from agentforge.memory import MemoryManager, MemoryProvider
-    from agentforge.skills import Skill, SkillRegistry
-    from agentforge.profiles import ProfileRegistry, ProviderRegistry  # 新增
+    from hai_agent.providers import Provider
+    from hai_agent.memory import MemoryManager, MemoryProvider
+    from hai_agent.skills import Skill, SkillRegistry
+    from hai_agent.profiles import ProfileRegistry, ProviderRegistry  # 新增
 ```
 
 - [ ] **Step 2: 添加 validate_profiles 方法**
@@ -1751,7 +1751,7 @@ if TYPE_CHECKING:
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/agent.py
+git add hai_agent/agent.py
 git commit -m "feat(agent): 支持 Profile 注册表参数
 
 - 添加 profile_registry 和 provider_registry 参数
@@ -1764,17 +1764,17 @@ git commit -m "feat(agent): 支持 Profile 注册表参数
 ## Task 9: 更新主模块导出
 
 **Files:**
-- Modify: `agentforge/__init__.py`
+- Modify: `hai_agent/__init__.py`
 
 - [ ] **Step 1: 导出 profiles 模块**
 
-在 `agentforge/__init__.py` 中添加导出：
+在 `hai_agent/__init__.py` 中添加导出：
 
 在导入部分添加：
 
 ```python
 # Profile 系统
-from agentforge.profiles import (
+from hai_agent.profiles import (
     AgentProfile,
     ProviderCredentials,
     ProviderRegistry,
@@ -1800,7 +1800,7 @@ Expected: PASS (所有测试)
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/__init__.py
+git add hai_agent/__init__.py
 git commit -m "feat: 导出 profiles 模块到公共 API"
 ```
 
@@ -1863,8 +1863,8 @@ providers:
 ### 3. 使用 Profile
 
 \`\`\`python
-from agentforge import Agent
-from agentforge.profiles import ProfileRegistry, ProviderRegistry
+from hai_agent import Agent
+from hai_agent.profiles import ProfileRegistry, ProviderRegistry
 
 # 初始化
 provider_registry = ProviderRegistry()
@@ -1995,8 +1995,8 @@ pytest tests/test_agent_profile.py tests/test_provider_registry.py tests/test_pr
 
 \`\`\`python
 # 测试完整的 Profile 流程
-from agentforge import Agent
-from agentforge.profiles import ProfileRegistry, ProviderRegistry, AgentProfile
+from hai_agent import Agent
+from hai_agent.profiles import ProfileRegistry, ProviderRegistry, AgentProfile
 
 # 1. 初始化
 provider_registry = ProviderRegistry()

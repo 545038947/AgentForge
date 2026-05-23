@@ -3,7 +3,7 @@
 import time
 import threading
 
-from agentforge.providers.rate_limiter import (
+from hai_agent.providers.rate_limiter import (
     RateLimitConfig, TokenBucketRateLimiter, ProviderRateLimiter,
 )
 

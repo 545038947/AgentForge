@@ -2,9 +2,9 @@
 
 import pytest
 from pathlib import Path
-from agentforge.profiles.profile import AgentProfile
-from agentforge.profiles.registry import ProfileRegistry
-from agentforge.profiles.provider_registry import ProviderRegistry
+from hai_agent.profiles.profile import AgentProfile
+from hai_agent.profiles.registry import ProfileRegistry
+from hai_agent.profiles.provider_registry import ProviderRegistry
 
 
 class TestProfileRegistry:

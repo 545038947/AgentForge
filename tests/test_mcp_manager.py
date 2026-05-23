@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentforge.mcp.manager import MCPManager
-from agentforge.mcp.config import MCPConfig, MCPServerConfig
-from agentforge.mcp.errors import MCPConfigError, MCPConnectionError
-from agentforge.mcp.types import MCPToolSchema
+from hai_agent.mcp.manager import MCPManager
+from hai_agent.mcp.config import MCPConfig, MCPServerConfig
+from hai_agent.mcp.errors import MCPConfigError, MCPConnectionError
+from hai_agent.mcp.types import MCPToolSchema
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ class TestMCPManagerInitialize:
 
         config = MCPConfig(servers=[_make_server_config("my-server")])
 
-        with patch("agentforge.mcp.manager.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.manager.MCPClient", return_value=mock_client):
             await manager.initialize(config)
 
         # 验证 client 已创建并连接
@@ -140,7 +140,7 @@ class TestMCPManagerInitialize:
             _make_server_config("server-b"),
         ])
 
-        with patch("agentforge.mcp.manager.MCPClient", side_effect=[mock_client_a, mock_client_b]):
+        with patch("hai_agent.mcp.manager.MCPClient", side_effect=[mock_client_a, mock_client_b]):
             await manager.initialize(config)
 
         assert len(manager._clients) == 2
@@ -161,7 +161,7 @@ class TestMCPManagerInitialize:
             _make_server_config("enabled-server", enabled=True),
         ])
 
-        with patch("agentforge.mcp.manager.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.manager.MCPClient", return_value=mock_client):
             await manager.initialize(config)
 
         # 只有 enabled-server 创建了 client
@@ -186,7 +186,7 @@ class TestMCPManagerInitialize:
             _make_server_config("ok-server"),
         ])
 
-        with patch("agentforge.mcp.manager.MCPClient", side_effect=[fail_client, ok_client]):
+        with patch("hai_agent.mcp.manager.MCPClient", side_effect=[fail_client, ok_client]):
             await manager.initialize(config)
 
         # 失败的 server 不在 clients 中
@@ -207,7 +207,7 @@ class TestMCPManagerInitialize:
 
         config = MCPConfig(servers=[_make_server_config("fail-server")])
 
-        with patch("agentforge.mcp.manager.MCPClient", return_value=fail_client):
+        with patch("hai_agent.mcp.manager.MCPClient", return_value=fail_client):
             await manager.initialize(config)
 
         assert manager.is_initialized() is True
@@ -237,7 +237,7 @@ class TestMCPManagerInitialize:
 
         config = MCPConfig(servers=[_make_server_config("multi-tool-server")])
 
-        with patch("agentforge.mcp.manager.MCPClient", return_value=mock_client):
+        with patch("hai_agent.mcp.manager.MCPClient", return_value=mock_client):
             await manager.initialize(config)
 
         assert "multi-tool-server.search" in manager._tools
@@ -343,7 +343,7 @@ class TestMCPManagerGetTool:
         mock_client_b = _make_mock_client("server-b")
 
         # 直接构造 MCPTool 对象
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool_a = MCPTool(mock_client_a, tool_schema_a)
         tool_b = MCPTool(mock_client_b, tool_schema_b)
 
@@ -394,7 +394,7 @@ class TestMCPManagerGetTool:
         # 构造两个 server 有同名工具的场景
         tool_schema = _make_tool_schema("search", "搜索")
         mock_client = _make_mock_client("server-a")
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool = MCPTool(mock_client, tool_schema)
 
         manager._tools = {"server-a.search": tool}
@@ -425,7 +425,7 @@ class TestMCPManagerCallTool:
 
         tool_schema = _make_tool_schema("search", "搜索")
         mock_client = _make_mock_client("server-a")
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool = MCPTool(mock_client, tool_schema)
 
         manager._tools = {"server-a.search": tool}
@@ -443,7 +443,7 @@ class TestMCPManagerCallTool:
 
         tool_schema = _make_tool_schema("search", "搜索")
         mock_client = _make_mock_client("server-a")
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool = MCPTool(mock_client, tool_schema)
 
         manager._tools = {"server-a.search": tool}
@@ -458,7 +458,7 @@ class TestMCPManagerCallTool:
 
         tool_schema = _make_tool_schema("search", "搜索")
         mock_client = _make_mock_client("server-a")
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool = MCPTool(mock_client, tool_schema)
 
         manager._tools = {"server-a.search": tool}
@@ -486,7 +486,7 @@ class TestMCPManagerGetToolsForServer:
         tool_schema_b = _make_tool_schema("calculate", "计算")
         mock_client = _make_mock_client("server-a")
 
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool_a = MCPTool(mock_client, tool_schema_a)
         tool_b = MCPTool(mock_client, tool_schema_b)
 
@@ -515,7 +515,7 @@ class TestMCPManagerGetToolsForServer:
         mock_client_a = _make_mock_client("server-a")
         mock_client_b = _make_mock_client("server-b")
 
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool_a = MCPTool(mock_client_a, tool_schema_a)
         tool_b = MCPTool(mock_client_b, tool_schema_b)
 
@@ -579,7 +579,7 @@ class TestMCPManagerGetToolSchemasForLLM:
         tool_schema_b = _make_tool_schema("calculate", "计算")
         mock_client = _make_mock_client("server-a")
 
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool_a = MCPTool(mock_client, tool_schema_a)
         tool_b = MCPTool(mock_client, tool_schema_b)
 
@@ -649,7 +649,7 @@ class TestMCPManagerGetAllTools:
 
         tool_schema = _make_tool_schema("search", "搜索")
         mock_client = _make_mock_client("server-a")
-        from agentforge.mcp.tool import MCPTool
+        from hai_agent.mcp.tool import MCPTool
         tool = MCPTool(mock_client, tool_schema)
 
         manager._tools = {"server-a.search": tool}

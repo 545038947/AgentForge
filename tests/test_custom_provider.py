@@ -5,12 +5,12 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from dataclasses import dataclass
 
-from agentforge.providers.custom import CustomProvider
-from agentforge.providers.registry import (
+from hai_agent.providers.custom import CustomProvider
+from hai_agent.providers.registry import (
     load_custom_providers,
     create_custom_provider,
 )
-from agentforge.providers.profile import ProviderProfile, register_profile, get_profile
+from hai_agent.providers.profile import ProviderProfile, register_profile, get_profile
 
 
 class TestCustomProvider:

@@ -4,7 +4,7 @@ import pytest
 import threading
 import time
 
-from agentforge.tools import (
+from hai_agent.tools import (
     Tool,
     FunctionTool,
     tool,
@@ -20,7 +20,7 @@ from agentforge.tools import (
     ApprovalCallback,
     ApprovalManager,
 )
-from agentforge.types import ToolResult
+from hai_agent.types import ToolResult
 
 
 # ── 测试工具实现 ──────────────────────────────────────────────

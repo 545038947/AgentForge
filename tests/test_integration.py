@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentforge import (
+from hai_agent import (
     Agent,
     ToolsetDefinition,
     register_toolset,
@@ -11,7 +11,7 @@ from agentforge import (
     DefaultModelMetadataProvider,
     Settings,
 )
-from agentforge.providers.builtins import OpenAIProvider
+from hai_agent.providers.builtins import OpenAIProvider
 
 
 class TestIntegration:
@@ -31,7 +31,7 @@ class TestIntegration:
         agent = Agent(provider=provider, settings=settings)
 
         # 验证工具集已注册
-        from agentforge.tools.toolsets import get_toolset
+        from hai_agent.tools.toolsets import get_toolset
         toolset = get_toolset("custom")
         assert toolset is not None
 
@@ -99,7 +99,7 @@ class TestIntegration:
 
     def test_toolset_resolution(self):
         """测试工具集解析。"""
-        from agentforge.tools.toolsets import resolve_toolset
+        from hai_agent.tools.toolsets import resolve_toolset
 
         # browser 工具集包含 web
         tools = resolve_toolset("browser")
@@ -110,7 +110,7 @@ class TestIntegration:
 
     def test_event_types_available(self):
         """测试事件类型可用。"""
-        from agentforge.events import EventType
+        from hai_agent.events import EventType
 
         # 验证新事件类型
         assert hasattr(EventType, "AGENT_THINKING")
@@ -120,7 +120,7 @@ class TestIntegration:
 
     def test_all_exports_accessible(self):
         """测试所有导出可访问。"""
-        from agentforge import (
+        from hai_agent import (
             # 类型
             Message,
             NormalizedResponse,

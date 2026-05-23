@@ -17,15 +17,15 @@
 
 | 文件 | 职责 | 操作 |
 |------|------|------|
-| `agentforge/managers/message.py` | 添加线程锁 | 修改 |
-| `agentforge/core/execution.py` | 添加 ExecutionState 线程锁 | 修改 |
-| `agentforge/tools/executor.py` | threading.Lock→asyncio.Lock | 修改 |
-| `agentforge/memory/manager.py` | 添加 shutdown 方法 | 修改 |
-| `agentforge/memory/memory_store.py` | 添加 shutdown 方法 | 修改 |
-| `agentforge/memory/memory_store_base.py` | 添加 shutdown 抽象方法 | 修改 |
-| `agentforge/session/base.py` | 添加 shutdown 抽象方法 | 修改 |
-| `agentforge/session/builtins/file_based.py` | 实现 shutdown 方法 | 修改 |
-| `agentforge/agent.py` | 级联调用 shutdown | 修改 |
+| `hai_agent/managers/message.py` | 添加线程锁 | 修改 |
+| `hai_agent/core/execution.py` | 添加 ExecutionState 线程锁 | 修改 |
+| `hai_agent/tools/executor.py` | threading.Lock→asyncio.Lock | 修改 |
+| `hai_agent/memory/manager.py` | 添加 shutdown 方法 | 修改 |
+| `hai_agent/memory/memory_store.py` | 添加 shutdown 方法 | 修改 |
+| `hai_agent/memory/memory_store_base.py` | 添加 shutdown 抽象方法 | 修改 |
+| `hai_agent/session/base.py` | 添加 shutdown 抽象方法 | 修改 |
+| `hai_agent/session/builtins/file_based.py` | 实现 shutdown 方法 | 修改 |
+| `hai_agent/agent.py` | 级联调用 shutdown | 修改 |
 | `tests/test_checkpoint.py` | CheckpointManager 测试 | 创建 |
 
 ---
@@ -33,7 +33,7 @@
 ## Task 1: MessageManager 添加线程锁
 
 **Files:**
-- Modify: `agentforge/managers/message.py`
+- Modify: `hai_agent/managers/message.py`
 - Test: `tests/test_concurrent.py` (已有线程安全测试，扩展验证)
 
 ### 1.1 添加锁并保护所有可变状态
@@ -66,7 +66,7 @@ Expected: PASS
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/managers/message.py
+git add hai_agent/managers/message.py
 git commit -m "fix: 为 MessageManager 添加线程锁保护共享状态"
 ```
 
@@ -75,7 +75,7 @@ git commit -m "fix: 为 MessageManager 添加线程锁保护共享状态"
 ## Task 2: ExecutionState 添加线程锁
 
 **Files:**
-- Modify: `agentforge/core/execution.py`
+- Modify: `hai_agent/core/execution.py`
 
 ### 2.1 为 ExecutionEngine._state 添加锁
 
@@ -108,7 +108,7 @@ Expected: PASS
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/core/execution.py
+git add hai_agent/core/execution.py
 git commit -m "fix: 为 ExecutionState 添加线程锁保护共享状态"
 ```
 
@@ -117,7 +117,7 @@ git commit -m "fix: 为 ExecutionState 添加线程锁保护共享状态"
 ## Task 3: 修复 ToolExecutor 中 threading.Lock→asyncio.Lock
 
 **Files:**
-- Modify: `agentforge/tools/executor.py`
+- Modify: `hai_agent/tools/executor.py`
 
 ### 3.1 将 async 方法中的 threading.Lock 替换为 asyncio.Lock
 
@@ -165,7 +165,7 @@ Expected: PASS
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/tools/executor.py
+git add hai_agent/tools/executor.py
 git commit -m "fix: 修复 ToolExecutor async 方法中 threading.Lock 阻塞事件循环"
 ```
 
@@ -174,9 +174,9 @@ git commit -m "fix: 修复 ToolExecutor async 方法中 threading.Lock 阻塞事
 ## Task 4: 为 MemoryManager/MemoryStore 添加 shutdown 方法
 
 **Files:**
-- Modify: `agentforge/memory/memory_store_base.py`
-- Modify: `agentforge/memory/memory_store.py`
-- Modify: `agentforge/memory/manager.py`
+- Modify: `hai_agent/memory/memory_store_base.py`
+- Modify: `hai_agent/memory/memory_store.py`
+- Modify: `hai_agent/memory/manager.py`
 
 ### 4.1 在 MemoryStoreBase 添加 shutdown 抽象方法
 
@@ -238,7 +238,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add agentforge/memory/
+git add hai_agent/memory/
 git commit -m "feat: 为 MemoryManager/MemoryStore 添加 shutdown 方法"
 ```
 
@@ -247,8 +247,8 @@ git commit -m "feat: 为 MemoryManager/MemoryStore 添加 shutdown 方法"
 ## Task 5: 为 FileBasedSession 添加 shutdown 方法
 
 **Files:**
-- Modify: `agentforge/session/base.py`
-- Modify: `agentforge/session/builtins/file_based.py`
+- Modify: `hai_agent/session/base.py`
+- Modify: `hai_agent/session/builtins/file_based.py`
 
 ### 5.1 在 SessionBase 添加 shutdown 方法
 
@@ -283,7 +283,7 @@ Expected: PASS
 - [ ] **Step 4: 提交**
 
 ```bash
-git add agentforge/session/
+git add hai_agent/session/
 git commit -m "feat: 为 SessionBase/FileBasedSession 添加 shutdown 方法"
 ```
 
@@ -292,7 +292,7 @@ git commit -m "feat: 为 SessionBase/FileBasedSession 添加 shutdown 方法"
 ## Task 6: Agent.shutdown 级联调用子组件 shutdown
 
 **Files:**
-- Modify: `agentforge/agent.py`
+- Modify: `hai_agent/agent.py`
 
 ### 6.1 在 Agent.shutdown 中添加级联清理
 
@@ -335,7 +335,7 @@ Expected: PASS
 - [ ] **Step 3: 提交**
 
 ```bash
-git add agentforge/agent.py
+git add hai_agent/agent.py
 git commit -m "feat: Agent.shutdown 级联调用 MemoryManager/SessionProvider 清理"
 ```
 
@@ -361,7 +361,7 @@ import time
 
 import pytest
 
-from agentforge.tools.checkpoint import CheckpointManager, CheckpointData
+from hai_agent.tools.checkpoint import CheckpointManager, CheckpointData
 
 
 class TestCheckpointData:
