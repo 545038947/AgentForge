@@ -1123,6 +1123,11 @@ class Agent:
                     {"tool_calls": final_response.tool_calls},
                 )
 
+                # 构建工具调用信息
+                tool_names = [tc.name for tc in final_response.tool_calls]
+                tool_info = ", ".join(tool_names)
+                logger.info(f"执行工具: {tool_info}")
+
                 tool_results = self._execution_engine.execute_tool_calls(
                     response=final_response,
                     tools=self._tools,
@@ -1136,6 +1141,11 @@ class Agent:
 
                 # 添加工具结果
                 self._message_manager.add_tool_results(tool_results)
+
+                # 记录工具结果到日志
+                for result in tool_results:
+                    status = "失败" if result.is_error else "成功"
+                    logger.info(f"工具 {result.tool_call_id} {status}")
 
                 self._iteration_budget.consume()
                 iteration += 1

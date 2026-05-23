@@ -238,6 +238,10 @@ class REPL:
             for chunk in self.agent.stream(user_input):
                 if chunk.content:
                     print(chunk.content, end="", flush=True)
+                # 处理工具调用
+                if chunk.tool_calls:
+                    tool_names = [tc.name for tc in chunk.tool_calls]
+                    print(f"[调用工具: {', '.join(tool_names)}]", end="", flush=True)
 
             print("\n")
 
