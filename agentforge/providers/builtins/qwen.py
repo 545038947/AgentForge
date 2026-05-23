@@ -136,7 +136,7 @@ class QwenProvider(Provider):
             for chunk in stream:
                 yield chunk
 
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, RuntimeError) as e:
             error_str = str(e).lower()
             if "rate" in error_str or "limit" in error_str or "429" in error_str:
                 raise ProviderRateLimitError(
