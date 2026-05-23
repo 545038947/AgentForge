@@ -7,8 +7,10 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import logging
 import time
+import weakref
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -108,6 +110,7 @@ class Agent:
         session_id: Optional[str] = None,
         profile_registry: Optional["ProfileRegistry"] = None,
         provider_registry: Optional["ProviderRegistry"] = None,
+        register_atexit: bool = True,
     ):
         """初始化 Agent。
 
@@ -242,6 +245,11 @@ class Agent:
         self._last_activity_desc: str = "初始化"
         self._rate_limit_state: Optional[Dict[str, Any]] = None
         self._api_call_count: int = 0
+
+        # atexit 钩子注册
+        self._atexit_registered: bool = False
+        if register_atexit:
+            self._register_atexit()
 
     def _restore_session_history(self) -> None:
         """从 SessionProvider 恢复会话历史。"""
@@ -1429,6 +1437,13 @@ class Agent:
 
         同步记忆数据并清理资源。
         """
+        # 防止重复关闭
+        if not hasattr(self, '_shutdown_done'):
+            self._shutdown_done = False
+        if self._shutdown_done:
+            return
+        self._shutdown_done = True
+
         # 同步记忆
         if self._memory_manager:
             try:
@@ -1467,6 +1482,25 @@ class Agent:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """上下文管理器出口。"""
         self.shutdown()
+
+    def _register_atexit(self) -> None:
+        """注册 atexit 钩子，确保进程退出时清理资源。"""
+        # 使用弱引用避免阻止 Agent 被垃圾回收
+        weak_self = weakref.ref(self)
+
+        def atexit_callback():
+            agent = weak_self()
+            if agent is not None:
+                try:
+                    agent.shutdown()
+                except Exception:
+                    pass
+
+        try:
+            atexit.register(atexit_callback)
+            self._atexit_registered = True
+        except Exception:
+            self._atexit_registered = False
 
     # === 活动追踪 ===
 

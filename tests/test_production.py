@@ -3,6 +3,7 @@
 import io
 import json
 import logging
+import weakref
 
 import pytest
 
@@ -11,6 +12,7 @@ from agentforge.utils.logging import (
     JsonFormatter,
     setup_secure_logging,
 )
+from agentforge.providers.builtins.ollama import OllamaProvider
 
 
 class TestSensitiveDataFilter:
@@ -201,3 +203,41 @@ class TestSetupSecureLogging:
             assert has_json is True
         finally:
             root_logger.handlers = original_handlers
+
+
+class TestResourceCleanup:
+    """资源清理测试。"""
+
+    def test_atexit_hook_registered(self):
+        """测试 atexit 钩子被注册。"""
+        provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
+        from agentforge import Agent
+
+        agent = Agent(provider=provider, register_atexit=True)
+        assert agent._atexit_registered is True
+
+    def test_atexit_disabled(self):
+        """测试禁用 atexit 钩子。"""
+        provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
+        from agentforge import Agent
+
+        agent = Agent(provider=provider, register_atexit=False)
+        assert agent._atexit_registered is False
+
+    def test_shutdown_idempotent(self):
+        """测试 shutdown 可以安全地多次调用。"""
+        provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
+        from agentforge import Agent
+
+        agent = Agent(provider=provider, register_atexit=False)
+        agent.shutdown()
+        agent.shutdown()  # 不应抛出异常
+
+    def test_context_manager_cleanup(self):
+        """测试上下文管理器正确清理。"""
+        provider = OllamaProvider(model="test", base_url="http://localhost:11434/v1")
+        from agentforge import Agent
+
+        with Agent(provider=provider, register_atexit=False) as agent:
+            assert agent is not None
+        # 退出上下文后 shutdown 应被调用，无异常
