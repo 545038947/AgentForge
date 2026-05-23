@@ -48,6 +48,14 @@ class DelegationConfig:
 
 
 @dataclass
+class MCPConfig:
+    """MCP Server 配置。"""
+
+    config_path: str = ""  # MCP 配置文件路径
+    enabled: bool = False
+
+
+@dataclass
 class DemoConfig:
     """Demo 总配置。"""
 
@@ -55,6 +63,7 @@ class DemoConfig:
     agent: AgentConfig = field(default_factory=AgentConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
     delegation: DelegationConfig = field(default_factory=DelegationConfig)
+    mcp: MCPConfig = field(default_factory=MCPConfig)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "DemoConfig":
@@ -91,6 +100,10 @@ class DemoConfig:
             delegation=DelegationConfig(
                 max_concurrent=data.get("delegation", {}).get("max_concurrent", 3),
                 max_depth=data.get("delegation", {}).get("max_depth", 2),
+            ),
+            mcp=MCPConfig(
+                config_path=data.get("mcp", {}).get("config_path", ""),
+                enabled=data.get("mcp", {}).get("enabled", False),
             ),
         )
 

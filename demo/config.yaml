@@ -31,3 +31,10 @@ delegation:
   max_concurrent: 3
   # 最大深度
   max_depth: 2
+
+# MCP (Model Context Protocol) 配置
+mcp:
+  # 是否启用 MCP
+  enabled: true
+  # MCP Server 配置文件路径
+  config_path: "mcp_config.yaml"
