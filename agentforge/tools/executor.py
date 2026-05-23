@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import concurrent.futures
 import contextvars
 import logging
@@ -101,7 +102,8 @@ class ToolExecutor:
         self._interrupt_check_interval = interrupt_check_interval
         self._enable_guardrails = enable_guardrails
         self._executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
-        self._lock = threading.Lock()
+        self._sync_lock = threading.Lock()
+        self._async_lock = asyncio.Lock()
         self._executions: Dict[str, ToolExecution] = {}
         self._interrupt_token: Optional["InterruptToken"] = None
         self._guardrail_controller: Optional[ToolCallGuardrailController] = None
@@ -111,7 +113,7 @@ class ToolExecutor:
 
     def start(self) -> None:
         """启动执行器。"""
-        with self._lock:
+        with self._sync_lock:
             if self._executor is None:
                 self._executor = concurrent.futures.ThreadPoolExecutor(
                     max_workers=self._max_workers,
@@ -124,7 +126,7 @@ class ToolExecutor:
         Args:
             wait: 是否等待所有任务完成
         """
-        with self._lock:
+        with self._sync_lock:
             if self._executor is not None:
                 self._executor.shutdown(wait=wait)
                 self._executor = None
@@ -225,7 +227,7 @@ class ToolExecutor:
 
         finally:
             execution.end_time = time.time()
-            with self._lock:
+            with self._sync_lock:
                 self._executions[tool_call_id] = execution
 
     def _execute_with_timeout(
@@ -385,7 +387,7 @@ class ToolExecutor:
 
     def clear_executions(self) -> None:
         """清空执行记录。"""
-        with self._lock:
+        with self._sync_lock:
             self._executions.clear()
 
     # === 异步方法 ===
@@ -406,7 +408,6 @@ class ToolExecutor:
         Returns:
             工具执行结果
         """
-        import asyncio
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None,
@@ -427,8 +428,6 @@ class ToolExecutor:
         Returns:
             工具执行结果列表（按输入顺序）
         """
-        import asyncio
-
         if not calls:
             return []
 
