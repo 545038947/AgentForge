@@ -59,6 +59,10 @@ def main():
     agent1.enable_memory_store(str(memory_dir))
     print("✅ 已启用记忆存储")
 
+    # 启用自动记忆提取
+    agent1._memory_manager.enable_auto_extraction()
+    print("✅ 已启用自动记忆提取")
+
     # 预取记忆（首次为空）
     agent1.prefetch()
 
@@ -69,6 +73,17 @@ def main():
 
     response1 = agent1.run(prompt1)
     print(f"Agent: {response1.content}")
+
+    # 提取并存储记忆（从对话中自动提取）
+    memories = agent1._memory_manager.extract_and_store(
+        user_message=prompt1,
+        assistant_response=response1.content,
+        sync=True,
+    )
+    if memories:
+        print(f"📝 提取了 {len(memories)} 条记忆")
+        for m in memories:
+            print(f"   - {m.content[:50]}...")
 
     # 同步记忆到存储
     agent1.sync()
@@ -95,7 +110,14 @@ def main():
 
     # 预取记忆（恢复之前的记忆）
     agent2.prefetch()
-    print("✅ 已预取记忆")
+
+    # 检查加载的记忆
+    memory_prompt = agent2._memory_manager.get_memory_for_prompt("memory")
+    if memory_prompt:
+        print(f"✅ 已预取记忆: {len(memory_prompt)} 字符")
+        print(f"   内容预览: {memory_prompt[:100]}...")
+    else:
+        print("⚠️ 未加载到记忆内容")
 
     # 测试记忆恢复
     print("\n--- 测试记忆恢复 ---")
