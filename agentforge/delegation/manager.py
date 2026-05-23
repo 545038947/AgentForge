@@ -24,6 +24,7 @@ from agentforge.delegation.result import (
 from agentforge.events import EventType
 from agentforge.interrupt import InterruptToken
 from agentforge.types import NormalizedResponse
+from agentforge.types.errors import ProviderError
 
 # 新增
 from agentforge.profiles.profile import AgentProfile
@@ -219,7 +220,7 @@ class DelegationManager:
                 total_tokens=total_tokens,
             )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TimeoutError) as e:
             logger.error(f"委托执行错误: {e}")
             return DelegationResult(
                 status=DelegationStatus.FAILED,
@@ -296,7 +297,7 @@ class DelegationManager:
                         status=DelegationStatus.TIMEOUT,
                         exit_reason=ExitReason.TIMEOUT,
                     )
-                except Exception as e:
+                except (RuntimeError, ValueError, TimeoutError) as e:
                     results[i] = TaskResult(
                         task_index=i,
                         status=DelegationStatus.FAILED,
@@ -405,7 +406,7 @@ class DelegationManager:
 
             return result
 
-        except Exception as e:
+        except (RuntimeError, ProviderError, TimeoutError) as e:
             duration = time.monotonic() - start_time
             logger.error(f"子 Agent 执行错误: {e}")
             return TaskResult(
@@ -468,7 +469,7 @@ class DelegationManager:
 
             return child_agent
 
-        except Exception as e:
+        except (RuntimeError, ImportError, ValueError) as e:
             logger.error(f"创建子 Agent 失败: {e}")
             return None
 
@@ -736,7 +737,7 @@ class DelegationManager:
                 if hasattr(agent, "interrupt"):
                     agent.interrupt(f"通过委托管理器中断 ({child_id})")
                 return True
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 logger.debug(f"中断子 Agent 失败: {e}")
                 return False
 
@@ -784,7 +785,7 @@ class DelegationManager:
         if self._event_dispatcher:
             try:
                 self._event_dispatcher.dispatch(event_type, data)
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.debug(f"发射事件失败: {e}")
 
     # === 异步方法 ===

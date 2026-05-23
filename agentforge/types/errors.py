@@ -6,6 +6,11 @@
 from __future__ import annotations
 
 import enum
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
@@ -1218,8 +1223,8 @@ def _extract_error_body(error: Exception) -> dict:
             json_body = response.json()
             if isinstance(json_body, dict):
                 return json_body
-        except Exception:
-            pass
+        except (json.JSONDecodeError, ValueError, AttributeError, UnicodeDecodeError):
+            logger.debug("无法解析响应体为 JSON")
     return {}
 
 

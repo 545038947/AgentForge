@@ -39,7 +39,7 @@ def safe_schedule_threadsafe(
 
     try:
         return asyncio.run_coroutine_threadsafe(coro, loop)
-    except Exception:
+    except (RuntimeError,):
         if asyncio.iscoroutine(coro):
             coro.close()
         return None

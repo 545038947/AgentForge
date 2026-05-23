@@ -107,8 +107,8 @@ class ToolCallAccumulator:
             if hasattr(extra, "model_dump"):
                 try:
                     extra = extra.model_dump()
-                except Exception:
-                    pass
+                except (AttributeError, TypeError, ValueError):
+                    logger.debug("model_dump 调用失败，使用原始 extra_content")
             entry["extra_content"] = extra
 
         # 检查是否需要通知工具开始

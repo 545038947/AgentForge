@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from agentforge.types import Message, TextContent, ToolUseContent, ToolResultContent
+from agentforge.types.errors import ProviderError
 from agentforge.context.estimator import TokenEstimator
 
 if TYPE_CHECKING:
@@ -591,7 +592,7 @@ class ContextCompressor:
 
             return response.content or ""
 
-        except Exception as e:
+        except (ProviderError, json.JSONDecodeError, ValueError) as e:
             logger.error(f"LLM 摘要生成失败: {e}")
             # 回退到简单摘要
             return self._create_simple_summary(messages, indices)

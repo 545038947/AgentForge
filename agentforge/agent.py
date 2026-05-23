@@ -31,6 +31,7 @@ from agentforge.context import ContextCompressor
 from agentforge.tools import Tool, FunctionTool, ApprovalCallback
 from agentforge.tools.guardrails import ToolCallGuardrailController
 from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta, ToolCall
+from agentforge.mcp.errors import MCPConnectionError
 from agentforge.types.errors import ProviderError
 from agentforge.types.messages import TextContent, ImageContent, ToolUseContent
 from agentforge.core import (
@@ -305,7 +306,7 @@ class Agent:
                 content=content,
                 **kwargs,
             )
-        except Exception as e:
+        except (OSError, IOError) as e:
             logger.warning(f"同步消息到会话失败: {e}")
 
     def _sync_assistant_message(self, response: NormalizedResponse) -> None:
@@ -338,7 +339,7 @@ class Agent:
                 content=response.content or "",
                 tool_calls=tool_calls_data,
             )
-        except Exception as e:
+        except (OSError, IOError) as e:
             logger.warning(f"同步 assistant 消息到会话失败: {e}")
 
     def get_session_id(self) -> Optional[str]:
@@ -1450,7 +1451,7 @@ class Agent:
             try:
                 sync_result = self._memory_manager.sync_all()
                 logger.debug(f"记忆同步结果: {sync_result}")
-            except Exception as e:
+            except (OSError, IOError) as e:
                 logger.warning(f"同步记忆失败: {e}")
 
         # 关闭 MCP Servers
@@ -1464,14 +1465,14 @@ class Agent:
                         self._mcp_manager.shutdown()
                     )
                     future.result(timeout=10)
-            except Exception as e:
+            except (OSError, MCPConnectionError) as e:
                 logger.warning(f"关闭 MCP Servers 失败: {e}")
 
         # 清理技能
         if self._skill_registry:
             try:
                 self._skill_registry.clear()
-            except Exception as e:
+            except (OSError, RuntimeError) as e:
                 logger.debug(f"清理技能注册表失败: {e}")
 
         self._tool_orchestrator.shutdown()
@@ -1500,7 +1501,7 @@ class Agent:
         try:
             atexit.register(atexit_callback)
             self._atexit_registered = True
-        except Exception:
+        except (RuntimeError, OSError):
             self._atexit_registered = False
 
     # === 活动追踪 ===

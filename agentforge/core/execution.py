@@ -499,7 +499,7 @@ class ExecutionEngine:
         # 执行压缩
         try:
             compressed_messages = self._context_compressor.compress(messages)
-        except Exception as e:
+        except (ProviderError, ValueError) as e:
             logger.warning(f"上下文压缩失败: {e}")
             return None
 
@@ -674,8 +674,8 @@ class ExecutionEngine:
                 )
                 return None
 
-        except Exception as e:
-            logger.warning(f"图片缩小失败: {e}")
+        except (OSError, ValueError, TypeError) as e:
+            logger.debug(f"图片缩小跳过: {e}")
             return None
 
     def _estimate_tokens(self, messages: List[Message]) -> int:
@@ -806,7 +806,7 @@ class ExecutionEngine:
                     if decision.action == "warn":
                         logger.warning(f"工具护栏警告: {decision.message}")
 
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 result = ToolResult(
                     tool_call_id=tc.id,
                     content=f"工具执行错误: {e}",

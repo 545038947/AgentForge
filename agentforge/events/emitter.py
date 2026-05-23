@@ -121,14 +121,14 @@ class EventEmitter:
                 try:
                     if not listener.filter_func(event):
                         continue
-                except Exception as e:
+                except (RuntimeError, ValueError, TypeError) as e:
                     logger.warning(f"Event filter error: {e}")
                     continue
 
             # 调用回调
             try:
                 listener.callback(event)
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.warning(f"Event callback error: {e}")
 
     def create_event(

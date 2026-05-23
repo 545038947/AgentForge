@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -178,5 +179,5 @@ class ProfileRegistry:
 
             logger.info(f"已从 {path} 加载 {len(data)} 个 Profile")
 
-        except Exception as e:
+        except (OSError, yaml.YAMLError, json.JSONDecodeError, ValueError) as e:
             logger.error(f"加载 Profile 配置失败: {path}, 错误: {e}")

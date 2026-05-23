@@ -69,7 +69,7 @@ class StdioTransport(MCPTransport):
             self._reader = self._process.stdout
             self._writer = self._process.stdin
 
-        except Exception as e:
+        except (OSError, FileNotFoundError, PermissionError, subprocess.SubprocessError) as e:
             raise MCPConnectionError(f"Failed to start MCP Server: {e}") from e
 
     async def request(
@@ -112,7 +112,7 @@ class StdioTransport(MCPTransport):
 
         except json.JSONDecodeError as e:
             raise MCPConnectionError(f"Invalid JSON response: {e}") from e
-        except Exception as e:
+        except (OSError, ConnectionError, json.JSONDecodeError, RuntimeError) as e:
             if isinstance(e, MCPConnectionError):
                 raise
             raise MCPConnectionError(f"Request failed: {e}") from e
@@ -137,7 +137,7 @@ class StdioTransport(MCPTransport):
             self._writer.write(notification_str.encode("utf-8"))
             await self._writer.drain()
 
-        except Exception as e:
+        except (OSError, ConnectionError, BrokenPipeError) as e:
             raise MCPConnectionError(f"Failed to send notification: {e}") from e
 
     async def close(self) -> None:

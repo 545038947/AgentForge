@@ -106,7 +106,7 @@ class HTTPTransport(MCPTransport):
             raise MCPConnectionError(f"HTTP request failed: {e}") from e
         except json.JSONDecodeError as e:
             raise MCPConnectionError(f"Invalid JSON response: {e}") from e
-        except Exception as e:
+        except (httpx.HTTPError, OSError, ConnectionError, TimeoutError, json.JSONDecodeError) as e:
             if isinstance(e, MCPConnectionError):
                 raise
             raise MCPConnectionError(f"Request failed: {e}") from e

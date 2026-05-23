@@ -77,7 +77,7 @@ class FileBasedSessionProvider(SessionProvider):
                     data = json.load(f)
                     self._message_id_counter = data.get("message_id_counter", 0)
                     self._title_index = data.get("title_index", {})
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, ValueError) as e:
                 logger.warning(f"加载会话索引失败: {e}")
 
     def _save_index(self) -> None:
@@ -89,7 +89,7 @@ class FileBasedSessionProvider(SessionProvider):
                     "message_id_counter": self._message_id_counter,
                     "title_index": self._title_index,
                 }, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             logger.error(f"保存会话索引失败: {e}")
 
     def _get_session_dir(self, session_id: str) -> Path:
@@ -105,7 +105,7 @@ class FileBasedSessionProvider(SessionProvider):
             with open(meta_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return SessionInfo(**data)
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError, TypeError) as e:
             logger.warning(f"加载会话元数据失败 {session_id}: {e}")
             return None
 
@@ -147,7 +147,7 @@ class FileBasedSessionProvider(SessionProvider):
                     if line:
                         data = json.loads(line)
                         messages.append(MessageRecord(**data))
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError) as e:
             logger.warning(f"加载会话消息失败 {session_id}: {e}")
 
         return messages
@@ -208,7 +208,7 @@ class FileBasedSessionProvider(SessionProvider):
                 for old_backup in backups[:-10]:
                     shutil.rmtree(old_backup)
                     logger.debug(f"删除旧备份: {old_backup}")
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             logger.error(f"创建备份失败: {e}")
 
     def create_session(
@@ -505,7 +505,7 @@ class FileBasedSessionProvider(SessionProvider):
                 with open(output_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 return True
-            except Exception as e:
+            except (OSError, PermissionError, TypeError) as e:
                 logger.error(f"导出会话失败: {e}")
                 return False
 
@@ -558,7 +558,7 @@ class FileBasedSessionProvider(SessionProvider):
                 self._save_index()
 
             return session_id
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError, KeyError) as e:
             logger.error(f"导入会话失败: {e}")
             return None
 
