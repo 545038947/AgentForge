@@ -141,6 +141,24 @@ from agentforge.profiles import (
     ProfileRegistry,
 )
 
+# MCP 支持
+from agentforge.mcp import (
+    MCPClient,
+    MCPManager,
+    MCPTool,
+    MCPConfig,
+    MCPServerConfig,
+    MCPToolSchema,
+    MCPResourceSchema,
+    MCPToolResult,
+    MCPResourceContent,
+    MCPError,
+    MCPConnectionError,
+    MCPToolCallError,
+    MCPResourceError,
+    MCPConfigError,
+)
+
 # 触发内置 Provider 自动注册
 import agentforge.providers.builtins
 
@@ -251,4 +269,19 @@ __all__ = [
     "ProviderCredentials",
     "ProviderRegistry",
     "ProfileRegistry",
+    # MCP 支持
+    "MCPClient",
+    "MCPManager",
+    "MCPTool",
+    "MCPConfig",
+    "MCPServerConfig",
+    "MCPToolSchema",
+    "MCPResourceSchema",
+    "MCPToolResult",
+    "MCPResourceContent",
+    "MCPError",
+    "MCPConnectionError",
+    "MCPToolCallError",
+    "MCPResourceError",
+    "MCPConfigError",
 ]

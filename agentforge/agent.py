@@ -658,6 +658,86 @@ class Agent:
 
         return self._memory_manager.load_from(provider_name, key, use_cache)
 
+    # === MCP 管理 ===
+
+    def add_mcp_servers(self, config_path: str) -> None:
+        """从 YAML 配置文件添加 MCP Servers。
+
+        Args:
+            config_path: YAML 配置文件路径
+
+        使用示例：
+            agent = Agent(model="gpt-4")
+            agent.add_mcp_servers("./mcp_config.yaml")
+
+            # 预取记忆和 MCP 工具
+            agent.prefetch()
+
+            # 运行对话（MCP 工具自动注册）
+            response = agent.run("使用工具帮我完成任务")
+        """
+        from agentforge.mcp import MCPManager
+
+        if not hasattr(self, "_mcp_manager") or self._mcp_manager is None:
+            self._mcp_manager = MCPManager()
+
+        # 同步初始化 MCP Servers（需要异步运行）
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            # 已经在异步上下文中，创建任务
+            asyncio.create_task(self._mcp_manager.initialize_from_yaml(config_path))
+        except RuntimeError:
+            # 不在异步上下文中，创建新的事件循环
+            asyncio.run(self._mcp_manager.initialize_from_yaml(config_path))
+
+        # 注册所有 MCP 工具到 Agent
+        for tool in self._mcp_manager.get_all_tools():
+            self.add_tool(tool)
+
+    def add_mcp_servers_from_dict(self, config_data: dict) -> None:
+        """从字典配置添加 MCP Servers。
+
+        Args:
+            config_data: MCP 配置字典
+
+        使用示例：
+            agent = Agent(model="gpt-4")
+            agent.add_mcp_servers_from_dict({
+                "servers": {
+                    "my-server": {
+                        "transport": "stdio",
+                        "command": "python",
+                        "args": ["-m", "my_mcp_server"]
+                    }
+                }
+            })
+        """
+        from agentforge.mcp import MCPManager
+
+        if not hasattr(self, "_mcp_manager") or self._mcp_manager is None:
+            self._mcp_manager = MCPManager()
+
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            asyncio.create_task(self._mcp_manager.initialize_from_dict(config_data))
+        except RuntimeError:
+            asyncio.run(self._mcp_manager.initialize_from_dict(config_data))
+
+        for tool in self._mcp_manager.get_all_tools():
+            self.add_tool(tool)
+
+    def get_mcp_manager(self) -> Optional["MCPManager"]:
+        """获取 MCP Manager 实例。"""
+        return getattr(self, "_mcp_manager", None)
+
+    def get_mcp_tools(self) -> List["Tool"]:
+        """获取所有已注册的 MCP 工具。"""
+        if not hasattr(self, "_mcp_manager") or self._mcp_manager is None:
+            return []
+        return self._mcp_manager.get_all_tools()
+
     # === 技能管理 ===
 
     def add_skill(self, skill: "Skill") -> None:
@@ -1301,6 +1381,18 @@ class Agent:
                 logger.debug(f"记忆同步结果: {sync_result}")
             except Exception as e:
                 logger.warning(f"同步记忆失败: {e}")
+
+        # 关闭 MCP Servers
+        if hasattr(self, "_mcp_manager") and self._mcp_manager:
+            try:
+                import asyncio
+                try:
+                    loop = asyncio.get_running_loop()
+                    asyncio.create_task(self._mcp_manager.shutdown())
+                except RuntimeError:
+                    asyncio.run(self._mcp_manager.shutdown())
+            except Exception as e:
+                logger.warning(f"关闭 MCP Servers 失败: {e}")
 
         # 清理技能
         if self._skill_registry:
