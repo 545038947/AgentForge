@@ -28,7 +28,7 @@ from agentforge.managers import MessageManager, ToolOrchestrator
 from agentforge.context import ContextCompressor
 from agentforge.tools import Tool, FunctionTool, ApprovalCallback
 from agentforge.tools.guardrails import ToolCallGuardrailController
-from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta
+from agentforge.types import Message, NormalizedResponse, ToolResult, StreamDelta, ToolCall
 from agentforge.types.messages import TextContent, ImageContent, ToolUseContent
 from agentforge.core import (
     IterationBudget,
@@ -1077,7 +1077,11 @@ class Agent:
             # 流式调用 Provider
             self._event_dispatcher.dispatch(EventType.PROVIDER_REQUEST, {})
 
+            # 累积流式响应
+            accumulated_content = ""
+            accumulated_tool_calls: List[ToolCall] = []
             final_response = None
+
             try:
                 for chunk in self._provider.stream(
                     messages=context,
@@ -1087,6 +1091,35 @@ class Agent:
                         EventType.STREAM_CHUNK,
                         {"chunk": chunk},
                     )
+
+                    # 累积内容
+                    if chunk.content:
+                        accumulated_content += chunk.content
+
+                    # 累积工具调用
+                    if chunk.tool_calls:
+                        for tc in chunk.tool_calls:
+                            # 检查是否已存在相同 id 的工具调用
+                            existing = None
+                            for existing_tc in accumulated_tool_calls:
+                                if existing_tc.id == tc.id:
+                                    existing = existing_tc
+                                    break
+
+                            if existing:
+                                # 累积 arguments
+                                if tc.arguments:
+                                    # 使用 dataclass 的不可变性，创建新对象
+                                    idx = accumulated_tool_calls.index(existing)
+                                    accumulated_tool_calls[idx] = ToolCall(
+                                        id=existing.id,
+                                        name=existing.name or tc.name,
+                                        arguments=existing.arguments + tc.arguments,
+                                        provider_data=existing.provider_data or tc.provider_data,
+                                    )
+                            else:
+                                accumulated_tool_calls.append(tc)
+
                     yield chunk
                     final_response = chunk
 
@@ -1100,6 +1133,15 @@ class Agent:
                     finish_reason="error",
                 )
                 break
+
+            # 构建累积后的最终响应
+            if final_response is not None:
+                final_response = NormalizedResponse(
+                    content=accumulated_content,
+                    tool_calls=accumulated_tool_calls if accumulated_tool_calls else None,
+                    finish_reason=final_response.finish_reason,
+                    usage=final_response.usage,
+                )
 
             self._event_dispatcher.dispatch(EventType.STREAM_END, {})
             self._event_dispatcher.dispatch(
