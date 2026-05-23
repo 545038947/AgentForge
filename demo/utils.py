@@ -9,6 +9,11 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+# Windows 终端编码设置
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # 添加项目根目录到路径（用于场景脚本）
 _project_root = Path(__file__).parent.parent
 if str(_project_root) not in sys.path:

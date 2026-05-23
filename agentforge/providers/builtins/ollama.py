@@ -357,15 +357,21 @@ class OllamaProvider(Provider):
                             model: str
 
                         delta_content = ""
+                        delta_tool_calls = None
                         choices = chunk_data.get("choices", [])
                         if choices:
                             delta = choices[0].get("delta", {})
                             delta_content = delta.get("content", "")
+                            # 提取工具调用（Ollama 在 delta 中返回 tool_calls）
+                            delta_tool_calls = delta.get("tool_calls")
                             finish_reason = choices[0].get("finish_reason")
 
                         yield MockChunk(
                             choices=[MockChoice(
-                                message=MockMessage(content=delta_content),
+                                message=MockMessage(
+                                    content=delta_content,
+                                    tool_calls=delta_tool_calls,
+                                ),
                                 finish_reason=finish_reason,
                             )],
                             model=model or self._model,

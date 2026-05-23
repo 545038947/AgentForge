@@ -685,8 +685,9 @@ class ExecutionEngine:
             if msg.content:
                 # 粗略估算：每 4 字符约 1 token
                 total += len(msg.content) // 4
-            if msg.tool_calls:
-                for tc in msg.tool_calls:
+            tool_calls = getattr(msg, "tool_calls", None)
+            if tool_calls:
+                for tc in tool_calls:
                     if tc.arguments:
                         total += len(str(tc.arguments)) // 4
         return total
@@ -777,8 +778,15 @@ class ExecutionEngine:
                 continue
 
             try:
-                # 执行工具
-                output = tool.execute(tc.arguments or {})
+                # 解析工具参数（JSON 字符串）
+                import json
+                try:
+                    args = json.loads(tc.arguments) if tc.arguments else {}
+                except json.JSONDecodeError:
+                    args = {}
+
+                # 执行工具（传递 tool_call_id 和 kwargs）
+                output = tool.execute(tc.id, **args)
 
                 result = ToolResult(
                     tool_call_id=tc.id,
