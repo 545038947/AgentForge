@@ -79,3 +79,7 @@ sessions_demo/
 
 # Accidentally installed packages
 Projectsnovel/
+
+output/*
+
+demo/output/*
