@@ -1446,13 +1446,19 @@ class Agent:
             return
         self._shutdown_done = True
 
-        # 同步记忆
+        # 关闭 MemoryManager
         if self._memory_manager:
             try:
-                sync_result = self._memory_manager.sync_all()
-                logger.debug(f"记忆同步结果: {sync_result}")
-            except (OSError, IOError) as e:
-                logger.warning(f"同步记忆失败: {e}")
+                self._memory_manager.shutdown()
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"关闭 MemoryManager 失败: {e}")
+
+        # 关闭 SessionProvider
+        if self._session_provider:
+            try:
+                self._session_provider.shutdown()
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"关闭 SessionProvider 失败: {e}")
 
         # 关闭 MCP Servers
         if hasattr(self, "_mcp_manager") and self._mcp_manager:

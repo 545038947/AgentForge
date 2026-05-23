@@ -870,6 +870,23 @@ class MemoryManager:
             except (RuntimeError, ValueError) as e:
                 logger.debug(f"发射事件失败: {e}")
 
+    def shutdown(self) -> None:
+        """关闭所有存储后端，释放资源。"""
+        # 关闭 MemoryStore
+        if self._memory_store:
+            try:
+                self._memory_store.shutdown()
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"关闭 MemoryStore 失败: {e}")
+
+        # 关闭所有 provider
+        for name, provider in self._providers.items():
+            try:
+                if hasattr(provider, "shutdown"):
+                    provider.shutdown()
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"关闭 provider {name} 失败: {e}")
+
 
 __all__ = [
     "MemoryBlock",

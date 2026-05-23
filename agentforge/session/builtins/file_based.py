@@ -562,5 +562,9 @@ class FileBasedSessionProvider(SessionProvider):
             logger.error(f"导入会话失败: {e}")
             return None
 
+    def shutdown(self) -> None:
+        """关闭会话，确保状态已持久化。"""
+        pass
+
 
 __all__ = ["FileBasedSessionProvider"]

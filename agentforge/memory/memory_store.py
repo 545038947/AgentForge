@@ -521,5 +521,12 @@ class MemoryStore(MemoryStoreBase):
         with self._lock:
             self._capture_snapshot()
 
+    def shutdown(self) -> None:
+        """关闭存储，将数据持久化到磁盘。"""
+        try:
+            self.sync_to_disk()
+        except OSError:
+            pass
+
 
 __all__ = ["MemoryStore", "ENTRY_DELIMITER", "DEFAULT_MEMORY_CHAR_LIMIT", "DEFAULT_USER_CHAR_LIMIT"]

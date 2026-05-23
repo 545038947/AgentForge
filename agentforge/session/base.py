@@ -253,3 +253,7 @@ class SessionProvider(ABC):
             except json.JSONDecodeError:
                 return content
         return content
+
+    def shutdown(self) -> None:
+        """清理资源。子类可重写。"""
+        pass

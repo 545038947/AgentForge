@@ -161,5 +161,9 @@ class MemoryStoreBase(ABC):
             self.sync_to_disk()
         return count
 
+    def shutdown(self) -> None:
+        """清理资源。子类可重写以执行持久化等操作。"""
+        pass
+
 
 __all__ = ["MemoryStoreBase"]
