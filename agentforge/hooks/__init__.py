@@ -120,7 +120,7 @@ class HookRegistry:
                 sys.modules[module_name] = module
                 try:
                     spec.loader.exec_module(module)
-                except Exception:
+                except (ImportError, SyntaxError, AttributeError, NameError):
                     sys.modules.pop(module_name, None)
                     raise
 
@@ -142,7 +142,7 @@ class HookRegistry:
 
                 logger.info(f"已加载 hook '{hook_name}'，事件: {events}")
 
-            except Exception as e:
+            except (ImportError, OSError, yaml.YAMLError, AttributeError, ValueError) as e:
                 logger.error(f"加载 hook {hook_dir.name} 失败: {e}")
 
     def _resolve_handlers(self, event_type: str) -> List[Callable]:
@@ -181,7 +181,7 @@ class HookRegistry:
                 result = handler(event_type, context)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.error(f"Hook 处理器失败 ({event_type}): {e}")
 
     async def emit_collect(
@@ -208,7 +208,7 @@ class HookRegistry:
                     result = await result
                 if result is not None:
                     results.append(result)
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.error(f"Hook 处理器失败 ({event_type}): {e}")
 
         return results
@@ -232,7 +232,7 @@ class HookRegistry:
                         loop.create_task(result)
                     except RuntimeError:
                         asyncio.run(result)
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.error(f"Hook 处理器失败 ({event_type}): {e}")
 
     def register(self, event_type: str, handler: Callable) -> None:

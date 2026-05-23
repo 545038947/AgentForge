@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterator, List, Optional
 from agentforge.providers.base import Provider, ProviderCapabilities
 from agentforge.providers.profile import ProviderProfile
 from agentforge.types import NormalizedResponse
-from agentforge.types.errors import ProviderError, ProviderConnectionError
+from agentforge.types.errors import ProviderError, ProviderConnectionError, ProviderRateLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -205,11 +205,16 @@ class CustomProvider(Provider):
             else:
                 yield from self._do_stream_openai(messages, tools, model, **kwargs)
 
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, RuntimeError) as e:
             error_str = str(e).lower()
             if "connection" in error_str or "refused" in error_str:
                 raise ProviderConnectionError(
                     f"无法连接到 {self.name} ({self._base_url}): {e}",
+                    provider=self.name,
+                ) from e
+            elif "rate" in error_str or "429" in error_str:
+                raise ProviderRateLimitError(
+                    f"{self.name} 速率限制: {e}",
                     provider=self.name,
                 ) from e
             else:

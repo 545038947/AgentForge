@@ -216,7 +216,7 @@ class SkillLoader:
 
             return package.to_skill()
 
-        except Exception as e:
+        except (ImportError, SyntaxError, OSError, AttributeError, ValueError) as e:
             logger.error(f"加载技能包 {package_dir} 失败: {e}")
             return None
 
@@ -243,7 +243,7 @@ class SkillLoader:
         except ImportError:
             logger.warning("yaml 库未安装，无法加载 YAML 技能文件")
             return None
-        except Exception as e:
+        except (OSError, AttributeError, ValueError) as e:
             logger.error(f"加载元数据 {manifest_path} 失败: {e}")
             return None
 
@@ -254,7 +254,7 @@ class SkillLoader:
             if handler_path.exists():
                 try:
                     return self._load_function_from_file(handler_path, "handle")
-                except Exception as e:
+                except (ImportError, SyntaxError, OSError, AttributeError, ValueError) as e:
                     logger.debug(f"加载处理器 {handler_path} 失败: {e}")
 
         return None
@@ -276,7 +276,7 @@ class SkillLoader:
                 tool = self._load_function_from_file(tool_file, "tool")
                 if tool:
                     tools.append(tool)
-            except Exception as e:
+            except (ImportError, SyntaxError, OSError, AttributeError, ValueError) as e:
                 logger.debug(f"加载工具 {tool_file} 失败: {e}")
 
         return tools
@@ -311,7 +311,7 @@ class SkillLoader:
         try:
             spec.loader.exec_module(module)
             return getattr(module, function_name, None)
-        except Exception:
+        except (ImportError, SyntaxError, AttributeError, NameError):
             sys.modules.pop(module_name, None)
             raise
 
@@ -338,7 +338,7 @@ class SkillLoader:
                     skill = self._load_skill_file(file_path)
                     if skill:
                         skills.append(skill)
-                except Exception as e:
+                except (ImportError, SyntaxError, OSError, AttributeError, ValueError) as e:
                     logger.warning(f"加载技能文件失败 {file_path}: {e}")
 
         # Python 模块
@@ -353,7 +353,7 @@ class SkillLoader:
                 skill = self._load_python_module(file_path)
                 if skill:
                     skills.append(skill)
-            except Exception as e:
+            except (ImportError, SyntaxError, OSError, AttributeError, ValueError) as e:
                 logger.debug(f"加载 Python 模块失败 {file_path}: {e}")
 
         return skills
@@ -482,7 +482,7 @@ class SkillLoader:
             if isinstance(attr, type) and issubclass(attr, Skill) and attr is not Skill:
                 try:
                     return attr()
-                except Exception as e:
+                except (RuntimeError, ValueError, TypeError) as e:
                     logger.debug(f"创建技能实例失败 {attr_name}: {e}")
 
         return None
@@ -733,7 +733,7 @@ class SkillHotReloader:
 
                     logger.info(f"已重新加载技能文件: {skill.name}")
 
-        except Exception as e:
+        except (ImportError, SyntaxError, OSError, AttributeError, ValueError, RuntimeError) as e:
             logger.error(f"重新加载技能失败 {file_path}: {e}")
             if self._on_error:
                 self._on_error(file_path, e)

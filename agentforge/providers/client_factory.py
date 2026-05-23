@@ -49,7 +49,7 @@ def _build_keepalive_http_client(base_url: str = "") -> Optional[Any]:
     except ImportError:
         logger.debug("httpx 未安装，跳过 keepalive 配置")
         return None
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         logger.debug(f"构建 keepalive HTTP 客户端失败: {e}")
         return None
 
@@ -79,8 +79,8 @@ def _get_proxy_for_base_url(base_url: str) -> Optional[str]:
         local_hosts = ("localhost", "127.0.0.1", "::1", "0.0.0.0")
         if hostname in local_hosts or hostname.startswith("192.168.") or hostname.startswith("10."):
             return None
-    except Exception:
-        pass
+    except ValueError:
+        logger.debug("解析代理 URL 失败，跳过本地地址检查")
 
     # 从环境变量读取代理
     https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
@@ -99,8 +99,8 @@ def _get_proxy_for_base_url(base_url: str) -> Optional[str]:
         for no_host in no_proxy_hosts:
             if hostname == no_host or hostname.endswith("." + no_host):
                 return None
-    except Exception:
-        pass
+    except ValueError:
+        logger.debug("解析 NO_PROXY 主机名失败，跳过 NO_PROXY 检查")
 
     return https_proxy or all_proxy or None
 
@@ -154,7 +154,7 @@ def create_openai_client(
     except ImportError:
         logger.warning("openai 库未安装，请运行: pip install openai")
         return None
-    except Exception as e:
+    except (ImportError, AttributeError, OSError, RuntimeError) as e:
         logger.error(f"创建 OpenAI 客户端失败: {e}")
         return None
 
@@ -208,7 +208,7 @@ def create_anthropic_client(
     except ImportError:
         logger.warning("anthropic 库未安装，请运行: pip install anthropic")
         return None
-    except Exception as e:
+    except (ImportError, AttributeError, OSError, RuntimeError) as e:
         logger.error(f"创建 Anthropic 客户端失败: {e}")
         return None
 

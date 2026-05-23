@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Type
 
+import json
 import yaml
 
 from agentforge.providers.base import Provider
@@ -185,11 +186,11 @@ class ProviderRegistry:
                         logger.warning(
                             f"Entry Point '{ep.name}' 不是有效的 Provider 类"
                         )
-                except Exception as e:
+                except (ImportError, AttributeError, TypeError) as e:
                     logger.warning(
                         f"加载 Entry Point Provider '{ep.name}' 失败: {e}"
                     )
-        except Exception as e:
+        except (ImportError, AttributeError) as e:
             logger.debug(f"Entry Points 发现失败: {e}")
 
     @classmethod
@@ -264,7 +265,7 @@ def load_custom_providers(path: Path) -> Dict[str, Provider]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-    except Exception as e:
+    except (OSError, yaml.YAMLError, json.JSONDecodeError, ValueError) as e:
         logger.error(f"加载自定义 Provider 配置失败: {path}, 错误: {e}")
         return {}
 
@@ -280,7 +281,7 @@ def load_custom_providers(path: Path) -> Dict[str, Provider]:
             if provider:
                 created_providers[provider_name] = provider
                 logger.info(f"已加载自定义 Provider: {provider_name}")
-        except Exception as e:
+        except (ImportError, AttributeError, TypeError, ValueError, KeyError) as e:
             logger.error(f"创建自定义 Provider '{provider_name}' 失败: {e}")
 
     return created_providers

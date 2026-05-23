@@ -422,7 +422,7 @@ class AnthropicTransport(Transport):
                                     "data": data,
                                 },
                             })
-                        except Exception:
+                        except (ValueError, TypeError, OSError):
                             logger.warning(f"无法解析图片 URL: {image_url[:50]}")
                     else:
                         # URL 图片（Anthropic 不直接支持，需要下载）

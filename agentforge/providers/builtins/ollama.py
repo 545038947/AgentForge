@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import requests
 from typing import Any, Dict, Iterator, List, Optional
@@ -151,7 +152,7 @@ class OllamaProvider(Provider):
             )
             if response.status_code == 200:
                 return response.json()
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, json.JSONDecodeError) as e:
             logger.debug(f"查询 Ollama 模型信息失败: {e}")
         return None
 
@@ -211,7 +212,7 @@ class OllamaProvider(Provider):
             if response.status_code == 200:
                 data = response.json()
                 return [m.get("name", "") for m in data.get("models", [])]
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, json.JSONDecodeError) as e:
             logger.warning(f"获取 Ollama 模型列表失败: {e}")
         return []
 
@@ -268,7 +269,7 @@ class OllamaProvider(Provider):
             for chunk in stream:
                 yield chunk
 
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, RuntimeError) as e:
             error_str = str(e).lower()
             if "connection" in error_str or "refused" in error_str:
                 raise ProviderConnectionError(

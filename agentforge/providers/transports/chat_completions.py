@@ -326,7 +326,7 @@ class ChatCompletionsTransport(Transport):
                     if hasattr(extra, "model_dump"):
                         try:
                             extra = extra.model_dump()
-                        except Exception:
+                        except (AttributeError, TypeError, ValueError):
                             pass
                     tc_provider_data["extra_content"] = extra
 

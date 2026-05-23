@@ -23,7 +23,7 @@ def _profile_user_agent() -> str:
     try:
         from agentforge import __version__
         return f"agentforge/{__version__}"
-    except Exception:
+    except (ImportError, AttributeError):
         return "agentforge"
 
 
@@ -168,7 +168,7 @@ class ProviderProfile:
                 data = json.loads(resp.read().decode())
             items = data if isinstance(data, list) else data.get("data", [])
             return [m["id"] for m in items if isinstance(m, dict) and "id" in m]
-        except Exception as exc:
+        except (OSError, TimeoutError, json.JSONDecodeError) as exc:
             logger.debug("fetch_models(%s): %s", self.name, exc)
             return None
 
