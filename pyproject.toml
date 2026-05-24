@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hai-agent"
-version = "0.1.0"
+version = "0.1.2"
 description = "可复用的 Agent 框架库，支持中国大模型"
 readme = "README.md"
 requires-python = ">=3.9"
