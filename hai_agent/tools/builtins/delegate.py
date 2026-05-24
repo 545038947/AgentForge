@@ -61,6 +61,7 @@ class DelegateTool(Tool):
 - context: 任务上下文（可选）
 - toolsets: 工具集列表（可选）
 - role: 角色（leaf 或 orchestrator，默认 leaf）
+- agent_profile: Agent Profile 名称（可选），指定子 Agent 的模型/温度/工具集配置
 """
 
     @property
@@ -86,6 +87,10 @@ class DelegateTool(Tool):
                     "enum": ["leaf", "orchestrator"],
                     "description": "子 Agent 角色",
                 },
+                "agent_profile": {
+                    "type": "string",
+                    "description": "Agent Profile 名称，用于指定子 Agent 的模型/温度/工具集配置",
+                },
             },
             "required": ["goal"],
         }
@@ -97,6 +102,7 @@ class DelegateTool(Tool):
         context: Optional[str] = None,
         toolsets: Optional[List[str]] = None,
         role: str = "leaf",
+        agent_profile: Optional[str] = None,
         **kwargs,
     ) -> ToolResult:
         """执行委托。
@@ -107,6 +113,7 @@ class DelegateTool(Tool):
             context: 任务上下文
             toolsets: 工具集列表
             role: 角色
+            agent_profile: Agent Profile 名称
 
         Returns:
             工具执行结果
@@ -119,12 +126,18 @@ class DelegateTool(Tool):
             )
 
         try:
-            result = self._delegation_manager.delegate(
+            # 构建 TaskSpec，包含 agent_profile
+            from hai_agent.delegation.config import TaskSpec
+
+            task = TaskSpec(
                 goal=goal,
                 context=context,
                 toolsets=toolsets,
                 role=role,
+                agent_profile=agent_profile,
             )
+
+            result = self._delegation_manager.delegate_batch([task])
 
             # 格式化结果
             summary = result.get_summary()

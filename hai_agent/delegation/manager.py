@@ -117,6 +117,7 @@ class DelegationManager:
         toolsets: Optional[List[str]] = None,
         role: str = "leaf",
         model: Optional[str] = None,
+        agent_profile: Optional[str] = None,
         interrupt_token: Optional[InterruptToken] = None,
     ) -> DelegationResult:
         """委托单个任务。
@@ -127,6 +128,7 @@ class DelegationManager:
             toolsets: 工具集列表
             role: 角色（leaf 或 orchestrator）
             model: 模型名称
+            agent_profile: Agent Profile 名称
             interrupt_token: 中断令牌
 
         Returns:
@@ -138,6 +140,7 @@ class DelegationManager:
             toolsets=toolsets,
             role=role,
             model=model,
+            agent_profile=agent_profile,
         )
         return self.delegate_batch([task], interrupt_token=interrupt_token)
 
@@ -446,16 +449,38 @@ class DelegationManager:
             # 获取父 Agent 的设置
             settings = getattr(self._parent_agent, "_settings", None)
 
+            # 解析 Profile（如果指定）
+            profile: Optional[AgentProfile] = None
+            if task.agent_profile:
+                profile = self._resolve_profile(task.agent_profile, task)
+
+            # 解析子 Agent 配置（应用 Profile 覆盖）
+            provider_name, model, child_settings = self._resolve_child_config(
+                task, profile, system_prompt
+            )
+
             # 构建子 Agent 的工具集
-            child_tools = self._build_child_tools(task)
+            child_tools = self._build_child_tools(task, profile)
 
             # 导入 Agent 类（延迟导入避免循环依赖）
             from hai_agent.agent import Agent
 
+            # 构建子 Agent 的设置
+            child_settings_obj = settings.model_copy() if settings else None
+
+            # 应用 Profile 和 task 的配置覆盖
+            if child_settings_obj:
+                if model:
+                    child_settings_obj.model = model
+                if child_settings.get("temperature") is not None:
+                    child_settings_obj.temperature = child_settings["temperature"]
+                if child_settings.get("max_tokens") is not None:
+                    child_settings_obj.max_tokens = child_settings["max_tokens"]
+
             # 创建子 Agent
             child_agent = Agent(
                 provider=provider,
-                settings=settings,
+                settings=child_settings_obj,
                 tools=child_tools,
             )
 
@@ -464,8 +489,9 @@ class DelegationManager:
             child_agent._delegate_depth = parent_depth + 1
 
             # 设置系统提示（如果 Provider 支持）
+            final_prompt = child_settings.get("system_prompt", system_prompt)
             if hasattr(child_agent, "_message_manager"):
-                child_agent._message_manager.set_system_prompt(system_prompt)
+                child_agent._message_manager.set_system_prompt(final_prompt)
 
             return child_agent
 
@@ -473,11 +499,16 @@ class DelegationManager:
             logger.error(f"创建子 Agent 失败: {e}")
             return None
 
-    def _build_child_tools(self, task: TaskSpec) -> List[Any]:
+    def _build_child_tools(
+        self,
+        task: TaskSpec,
+        profile: Optional[AgentProfile] = None,
+    ) -> List[Any]:
         """构建子 Agent 的工具集。
 
         Args:
             task: 任务规格
+            profile: Profile 对象（可选）
 
         Returns:
             工具列表
@@ -487,22 +518,29 @@ class DelegationManager:
         if self._parent_agent:
             parent_tools = getattr(self._parent_agent, "_tools", {})
 
-        # 被阻止的工具
-        blocked_tools = self._config.isolation.blocked_tools
+        # 被阻止的工具：合并配置级和 Profile 级
+        blocked_tools = set(self._config.isolation.blocked_tools)
+        if profile and profile.blocked_tools:
+            blocked_tools.update(profile.blocked_tools)
 
         # 根据任务指定的工具集过滤
+        # 优先级：task.toolsets > profile.toolsets
+        toolsets_to_resolve = task.toolsets
+        if toolsets_to_resolve is None and profile and profile.toolsets:
+            toolsets_to_resolve = profile.toolsets
+
         allowed_tool_names: Optional[Set[str]] = None
-        if task.toolsets:
+        if toolsets_to_resolve:
             # 解析工具集，获取允许的工具名称
             from hai_agent.tools.toolsets import resolve_toolset
 
             allowed_tool_names = set()
-            for toolset_name in task.toolsets:
+            for toolset_name in toolsets_to_resolve:
                 tools_in_toolset = resolve_toolset(toolset_name)
                 allowed_tool_names.update(tools_in_toolset)
 
             logger.debug(
-                f"任务工具集 {task.toolsets} 解析为工具: {allowed_tool_names}"
+                f"任务工具集 {toolsets_to_resolve} 解析为工具: {allowed_tool_names}"
             )
 
         # 过滤被阻止的工具
